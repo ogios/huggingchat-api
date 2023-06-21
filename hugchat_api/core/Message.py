@@ -1,6 +1,6 @@
 class Message:
     def __init__(self, conversation_id: str, web_search_enabled: bool):
-        self.text: str = ""
+        self.stream_text: list = []
         self.final_text: str = None
         self.web_search_steps = None
         self.done: bool = False
@@ -23,14 +23,14 @@ class Message:
         return self.web_search_steps
     
     def setText(self, text, done: bool = False):
-        self.text += text
+        self.stream_text.append(text)
         if done:
             self.done = True
     
-    def getText(self) -> str:
+    def getText(self) -> list:
         if self.error:
             raise Exception(self.error)
-        return self.text
+        return self.stream_text
     
     def setFinalText(self, text):
         self.final_text = text

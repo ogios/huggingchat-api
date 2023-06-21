@@ -95,7 +95,7 @@ class Bot:
         )
         return res
     
-    def getUUID(self):
+    def _getUUID(self):
         """
         random uuid
         :return:  hex with the format '8-4-4-4-12'
@@ -128,7 +128,7 @@ class Bot:
             "return_full_text": return_full_text
         }
     
-    def getData(self, text, web_search_id: str = "", params: dict = None):
+    def _getData(self, text, web_search_id: str = "", params: dict = None):
         """
         Default data
         """
@@ -137,8 +137,8 @@ class Bot:
             "inputs": text,
             "parameters": params if params else self.default_params,
             "options": {
-                "id": self.getUUID(),
-                "response_id": self.getUUID(),
+                "id": self._getUUID(),
+                "response_id": self._getUUID(),
                 "is_retry": False,
                 "use_cache": False,
                 "web_search_id": web_search_id
@@ -147,7 +147,7 @@ class Bot:
         }
         return data
     
-    def _parseData(self, res: requests.Response, message: Message):
+    def __parseData(self, res: requests.Response, message: Message):
         """
         Parser for EventStream
         """
@@ -179,9 +179,9 @@ class Bot:
         res.close()
         return reply
     
-    def parseData(self, res: requests.Response, message: Message):
+    def _parseData(self, res: requests.Response, message: Message):
         try:
-            reply = self._parseData(res, message)
+            reply = self.__parseData(res, message)
             if not reply:
                 raise Exception("No reply")
         except Exception as e:
@@ -189,7 +189,7 @@ class Bot:
             return e
         return None
     
-    def getReply(
+    def _getReply(
             self,
             conversation_id: str,
             text: str,
@@ -203,13 +203,13 @@ class Bot:
         """
         url = self.url_initConversation + f"/{conversation_id}"
         exp = Exception("No reply")
-        data = self.getData(text, web_search_id)
+        data = self._getData(text, web_search_id)
         for i in range(max_tries):
             res = self._requestsPost(url, stream=True, data=json.dumps(data))
             if res.status_code == 500:
                 logging.error("Internal error, may due to model overload, retrying...")
             else:
-                exp = self.parseData(res, message=message)
+                exp = self._parseData(res, message=message)
                 if not exp:
                     if callback != None:
                         callback[0](*callback[-1])
@@ -238,9 +238,9 @@ class Bot:
         web_search_id = js["messages"][-1]["id"] if js else ""
         logging.info(f"web_search_id: {web_search_id}")
         
-        self.getReply(conversation_id, text, message, web_search_id, max_tries, callback=callback)
+        self._getReply(conversation_id, text, message, web_search_id, max_tries, callback=callback)
     
-    def chat(self, text: str, conversation_id=None, web=False, max_tries: int = 3, callback: Tuple[Callable, tuple] = None) -> Message:
+    def chat(self, text: str, conversation_id=None, web_search=False, max_tries: int = 3, callback: Tuple[Callable, tuple] = None) -> Message:
         """
         Normal chat, send message and wait for reply
         """
@@ -248,12 +248,12 @@ class Bot:
         if not conversation_id:
             logging.info("No conversation selected")
             return None
-        message = Message(conversation_id, web)
+        message = Message(conversation_id, web_search)
         
-        if web:
+        if web_search:
             self.thread_pool.submit(self._chatWeb, (conversation_id, text, message, "", max_tries, callback))
         else:
-            self.thread_pool.submit(self.getReply, (conversation_id, text, message, "", max_tries, callback))
+            self.thread_pool.submit(self._getReply, (conversation_id, text, message, "", max_tries, callback))
         return message
     
     def updateTitle(self, conversation_id) -> str:

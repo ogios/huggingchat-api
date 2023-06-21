@@ -98,7 +98,7 @@ def main(EMAIL, PASSWD):
     parser.add_argument(
         "-u",
         type=str,
-        help="登录邮箱(没账号请先注册一个) - email to be sign in.(sign up before this)"
+        help="email to be sign in.(sign up before this)"
     )
     parser.add_argument(
         "-p",
