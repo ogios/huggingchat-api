@@ -1,13 +1,13 @@
-from setuptools import setup, find_packages
-
+from setuptools import find_packages
+from distutils.core import setup
 setup(
     name="hugchat_api",
-    version="0.1.0",
+    version="0.0.1.1",
     author="ogios",
     author_email="2134692955@qq.com",
     description="Hugging chat web api, use for chat with an Open-Assistant language model, 'Search Web' supported.",
     url="https://github.com/ogios/huggingchat-api",
-    packages=find_packages("hugchat_api"),
+    packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -28,8 +28,6 @@ setup(
     extras_require={
         "curl": ["pycurl"],
     },
-    package_dir={"": "hugchat_api"},
-    py_modules=["hugchat_api"],
     license="GNU General Public License v3.0",
     long_description=open("./README.md", "r").read(),
     long_description_content_type='text/markdown',
