@@ -1,6 +1,9 @@
 # Huggingchat api
 > I will be glad if this works perfectly and you also like it. I did as much as possible to make it works perfectly on my machine.
 
+```shell
+pip install hugchat-api
+```
 
 ## Sign in
 Here's a example of how to log into huggingface and get cookies
