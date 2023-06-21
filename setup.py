@@ -25,9 +25,11 @@ setup(
     install_requires=[
         "requests",
     ],
-    extras_require=[
-        "pycurl",
-    ],
+    extras_require={
+        "curl": ["pycurl"],
+    },
+    package_dir={"": "hugchat_api"},
+    py_modules=["hugchat_api"],
     license="GNU General Public License v3.0",
     long_description=open("./README.md", "r").read(),
     long_description_content_type='text/markdown',
