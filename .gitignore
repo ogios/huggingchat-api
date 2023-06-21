@@ -1,0 +1,7 @@
+Pipfile
+Pipfile.lock
+main.py
+
+.idea/
+TestArea/
+usercookies/
