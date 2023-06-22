@@ -38,12 +38,15 @@ def getTextFromInput(conversation_id, addition: str = ""):
             continue
         else:
             return text
-        
 
-def formatConversations(conversations: List[dict]):
+
+def formatConversations(conversations: dict):
     string = "* Conversations established:\n\n"
-    for i in range(len(conversations)):
-        string += f"	{i}. {conversations[i]['title']}\n"
+    # for i in conversations:
+    #     string += f"	{i}. {conversations[i]}\n"
+    cons = tuple(conversations.items())
+    for i in range(len(cons)):
+        string += f"	{i}. [{cons[i][0]}] - {cons[i][-1]}\n"
     # string += "\n"
     return string
 
@@ -52,3 +55,8 @@ def getTime():
     return str(datetime.datetime.now())
 
 
+def getIdByIndex(conversations: dict, index: int) -> str:
+    cons = list(conversations.keys())
+    if 0 <= index <= len(cons):
+        return cons[index]
+    raise Exception("Index out of bounds")

@@ -2,7 +2,7 @@ from setuptools import find_packages
 from distutils.core import setup
 setup(
     name="hugchat_api",
-    version="0.0.1.1",
+    version="0.0.1.2",
     author="ogios",
     author_email="2134692955@qq.com",
     description="Hugging chat web api, use for chat with an Open-Assistant language model, 'Search Web' supported.",

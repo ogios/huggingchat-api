@@ -12,6 +12,7 @@ from .WebSearch import WebSearch
 from .Message import Message
 from .ThreadPool import ThreadPool
 from ..utils import getTime
+from .Exceptions import *
 
 
 class Bot:
@@ -46,7 +47,8 @@ class Bot:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
         }
         self.cookies = cookies
-        self.conversations = list()
+        # self.conversations = list()
+        self.conversations = dict()
         self.current_conversation = None
         self.fetchConversations()
     
@@ -54,7 +56,8 @@ class Bot:
         """
         Get conversation a from a html and extract them using re
         """
-        self.conversations = []
+        logging.info("Fetching all conversations...")
+        self.conversations = dict()
         res = self._requestsGet(self.url_index)
         html = res.text
         conversation_ids = list(set(re.findall('href="/chat/conversation/(.*?)"', html)))
@@ -64,7 +67,8 @@ class Bot:
                 title = title[0].strip()
             else:
                 title = "Untitled conversation"
-            self.conversations.append({"id": i, "title": title})
+            self.conversations[i] = title
+            # self.conversations.append({"id": i, "title": title})
     
     def _requestsGet(self, url: str, params=None, stream=False) -> requests.Response:
         """
@@ -211,6 +215,8 @@ class Bot:
             else:
                 exp = self._parseData(res, message=message)
                 if not exp:
+                    if not self.conversations[conversation_id]:
+                        self.updateTitle(conversation_id)
                     if callback != None:
                         callback[0](*callback[-1])
                     return
@@ -260,15 +266,18 @@ class Bot:
         """
         Get conversation summary
         """
+        if not self.conversations.__contains__(conversation_id):
+            raise ConversationNotExistError(f"The given conversation is not in the map: {conversation_id}")
         url = self.url_initConversation + f"/{conversation_id}/summarize"
         res = self._requestsPost(url)
         if res.status_code != 200:
             raise Exception("get conversation title failed")
         js = res.json()
-        for i in range(len(self.conversations)):
-            if self.conversations[i]["id"] == conversation_id:
-                self.conversations[i]["title"] = js["title"]
-                break
+        self.conversations[conversation_id] = js["title"]
+        # for i in range(len(self.conversations)):
+        #     if self.conversations[i]["id"] == conversation_id:
+        #         self.conversations[i]["title"] = js["title"]
+        #         break
         return js["title"]
     
     def createConversation(self) -> str:
@@ -282,30 +291,28 @@ class Bot:
         js = res.json()
         conversation_id = js["conversationId"]
         # message = self.chat(text, conversation_id, web=web)
-        conversation = {"id": conversation_id, "title": "None"}
-        self.conversations.append(conversation)
+        self.conversations[conversation_id] = None
+        # conversation = {"id": conversation_id, "title": "None"}
+        # self.conversations.append(conversation)
         self.current_conversation = conversation_id
         return conversation_id
     
-    def removeConversation(self, index: int):
+    def removeConversation(self, conversation_id: str):
         """
         Remove conversation through the index of self.conversations
         """
-        if not 0 <= index <= len(self.conversations) - 1:
-            logging.info("Index out of bounds")
-            return
-        conversation_id = self.conversations[index]["id"]
+        if not self.conversations.__contains__(conversation_id):
+            raise ConversationNotExistError(f"The given conversation is not in the map: {conversation_id}")
         logging.info(f"Deleting conversation <{conversation_id}>")
         url = self.url_initConversation + f"/{conversation_id}"
         res = requests.delete(url, headers=self.headers, cookies=self.cookies)
         if res.status_code != 200:
             logging.info(f"{res.text}")
             logging.info("Delete conversation fatal")
-            return
-        del self.conversations[index]
+            raise Exception("Delete conversation fatal")
+        del self.conversations[conversation_id]
         if self.current_conversation == conversation_id:
             self.current_conversation = None
-        return 1
     
     def _getHistoriesByID(self, conversation_id):
         """
@@ -338,7 +345,7 @@ class Bot:
                         })
         return histories
     
-    def getHistoriesByID(self, conversation_id=None):
+    def getHistoriesByID(self, conversation_id=None) -> list:
         conversation_id = self.current_conversation if not conversation_id else conversation_id
         if not conversation_id:
             return []
@@ -347,14 +354,15 @@ class Bot:
         if histories == None:
             raise Exception("Something went wrong")
         else:
-            
             return histories
     
-    def getConversations(self):
+    def getConversations(self) -> dict:
         return self.conversations
     
-    def switchConversation(self, option: int):
-        self.current_conversation = self.conversations[option]["id"]
+    def switchConversation(self, conversation_id: str):
+        if not self.conversations.__contains__(conversation_id):
+            raise ConversationNotExistError(f"The given conversation is not in the map: {conversation_id}")
+        self.current_conversation = conversation_id
 
 
 if __name__ == "__main__":

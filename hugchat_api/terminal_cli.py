@@ -2,17 +2,17 @@ import gc, os, argparse, time
 import getpass
 import logging
 import traceback
-from rich.console import Console
-from rich.markdown import Markdown
+# from rich.console import Console
+# from rich.markdown import Markdown
 
 from .core import HuggingChat
 from .core.Message import Message
 from .core.Sign import Sign
 from .core.Bot import Bot
-from .utils import color, formatHistory, formatConversations, getTextFromInput
+from .utils import color, formatHistory, formatConversations, getTextFromInput, getIdByIndex
 
 COOKIE_DIR_PATH = os.path.abspath(os.path.dirname(__file__)) + "/usercookies"
-CONSOLE = Console()
+# CONSOLE = Console()
 hug = HuggingChat()
 
 # FLAG = False
@@ -58,18 +58,28 @@ def updateMSG(message: Message):
         
     msg = message.getFinalText()
     string = f"({color('Open-Assistant', 'blue')}): {msg}"
-    try:
-        markdown = Markdown(string)
-        CONSOLE.print(markdown)
-    except:
-        print(string)
+    print(string)
+    # try:
+    #     markdown = Markdown(string)
+    #     CONSOLE.print(markdown)
+    # except:
+    #     print(string)
 
 
 def updateWebSearch(message: Message):
     if not message.web_search_enabled:
         return
-    message.getWebSearchSteps()
-    pass
+    # length = 0
+    while not message.web_search_done:
+        # c = message.getWebSearchSteps()
+        # if len(c) > length:
+        #     for i in c[length-1:]:
+        #         print(i)
+        #         length += 1
+        time.sleep(0.5)
+    # print("======")
+    # print("======")
+    print(message.web_search_steps)
     # if js["type"] == "web_search" and js.__contains__("data"):
     #     data: dict = js["data"]
     #     if data["type"] == "update" and data.__contains__("message"):
@@ -123,7 +133,7 @@ def main(EMAIL, PASSWD):
     
     cookies = login(u, p, force)
     print(f"You are now logged in as <{u}>")
-    openassistant: Bot = hug.getBot(u, cookies=cookies)
+    bot: Bot = hug.getBot(u, cookies=cookies)
     gc.collect()
     while 1:
         try:
@@ -131,52 +141,55 @@ def main(EMAIL, PASSWD):
             # while FLAG:
             #     time.sleep(0.1)
             #     continue
-            text = getTextFromInput(openassistant.current_conversation)
+            text = getTextFromInput(bot.current_conversation)
             command = text.strip()
             if command[0] == "/":
                 command = command[1:].split(" ")
                 if command[0] == "exit" or command[0] == "q":
                     os._exit(0)
                 elif command[0] == "new":
-                    openassistant.createConversation()
+                    bot.createConversation()
                     NEW_CONVERSATION = True
                 elif command[0] == "ls":
-                    print(formatConversations(openassistant.getConversations()))
+                    print(formatConversations(bot.getConversations()))
                 elif command[0] == "cd":
                     try:
-                        openassistant.switchConversation(int(command[1]))
+                        tmp_id = getIdByIndex(bot.conversations, int(command[1]))
+                        bot.switchConversation(tmp_id)
                     except:
                         print("cd fatal")
                 elif command[0] == "rm":
                     try:
-                        openassistant.removeConversation(int(command[1]))
+                        tmp_id = getIdByIndex(bot.conversations, int(command[1]))
+                        bot.removeConversation(tmp_id)
                     except Exception as e:
                         
                         print(f"remove conversation fatal: {e}")
                 elif command[0] == "old":
-                    print(formatHistory(openassistant.getHistoriesByID()))
+                    print(formatHistory(bot.getHistoriesByID()))
                 elif command[0] == "web":
                     changeWeb_search()
                 elif command[0] == "reload":
                     print("Reloading conversations...")
-                    openassistant.fetchConversations()
-                    for i in openassistant.conversations:
-                        openassistant.updateTitle(i['id'])
+                    bot.fetchConversations()
+                    for i in bot.conversations:
+                        bot.updateTitle(i['id'])
                     print("done.")
-                    print(formatConversations(openassistant.getConversations()))
+                    print(formatConversations(bot.getConversations()))
                 else:
                     print("wrong command。")
                     continue
             else:
-                if not openassistant.current_conversation:
+                if not bot.current_conversation:
                     print(
                         "Please select or create a conversation using '/ls' and '/cd <int>' or '/new'.")
                     continue
                 
-                message = openassistant.chat(
+                message = bot.chat(
                     text,
-                    web=WEB_SEARCH,
-                    callback=(openassistant.updateTitle, (openassistant.current_conversation,)) if NEW_CONVERSATION else None
+                    conversation_id=bot.current_conversation,
+                    web_search=WEB_SEARCH,
+                    # callback=(bot.updateTitle, (bot.current_conversation,)) if NEW_CONVERSATION else None
                 )
                 updateWebSearch(message)
                 updateMSG(message)
@@ -186,6 +199,6 @@ def main(EMAIL, PASSWD):
 
 
 if __name__ == "__main__":
-    EMAIL = ""
+    EMAIL = os.getenv("EMAIL")
     PASSWD = ""
     main(EMAIL, PASSWD)

@@ -1,10 +1,14 @@
+import logging
+
+
 class Message:
     def __init__(self, conversation_id: str, web_search_enabled: bool):
+        self.done: bool = False
         self.stream_text: list = []
         self.final_text: str = None
-        self.web_search_steps = None
-        self.done: bool = False
         self.web_search_enabled = web_search_enabled
+        self.web_search_done = False
+        self.web_search_steps = list()
         self.error: Exception = None
         self.conversation_id: str = conversation_id
     
@@ -17,12 +21,18 @@ class Message:
     def setWebSearchSteps(self, process):
         self.web_search_steps = process
     
+    # def setWebSearchSteps(self, process):
+    #     logging.info(f"updating websearch: {process}")
+    #     self.web_search_steps.append(process)
+    
     def getWebSearchSteps(self):
         if self.error:
             raise self.error
         return self.web_search_steps
     
     def setText(self, text, done: bool = False):
+        if not self.web_search_done:
+            self.web_search_done = True
         self.stream_text.append(text)
         if done:
             self.done = True

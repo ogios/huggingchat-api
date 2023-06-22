@@ -39,12 +39,15 @@ class WebSearch:
 							continue
 						try:
 							if js["messages"][-1]["type"] == "result":
+								# self.message.setWebSearchSteps(js["messages"][-1])
+								self.message.web_search_done = True
 								return js
-							elif len(js["messages"]) - 1 > index:
-								if index == -1:
-									index = 0
-								for message in js["messages"][index+1:]:
-									index += 1
+							# elif len(js["messages"]) - 1 > index:
+							# 	if index == -1:
+							# 		index = 0
+							# 	for message in js["messages"][index+1:]:
+							# 		self.message.setWebSearchSteps(message)
+							# 		index += 1
 						except:
 							pass
 		except Exception as e:
