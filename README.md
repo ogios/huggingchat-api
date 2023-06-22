@@ -1,5 +1,13 @@
 # Huggingchat api
-> I will be glad if this works perfectly and you also like it. I did as much as possible to make it works perfectly on my machine.
+
+**Leave a star and you could win a billion(**
+
+> This is my first pypi project. Experienced some annoying moments, but i managed to do it anyway
+
+[![PyPI version](https://img.shields.io/pypi/v/hugchat-api.svg)](https://pypi.python.org/pypi/hugchat-api/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/hugchat-api.svg)](https://pypi.python.org/pypi/hugchat-api/)
+
+[![Downloads](https://static.pepy.tech/badge/hugchat-api)](https://pepy.tech/project/hugchat-api)
 
 ```shell
 pip install hugchat-api
