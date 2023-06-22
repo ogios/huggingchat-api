@@ -50,16 +50,17 @@ bot = HUG.getBot(email=EMAIL, cookies=cookies)
 - Get all conversations & Print title
 ```python
 conversations = bot.getConversations()
-print(conversations[0]["title"])
+conv_id = list(conversations.keys())[0]
+print(conversations[conv_id])
 ```
 - Get all chat histories by conversation_id
 ```python
-histories = bot.getHistoriesByID(conversation_id=conversations[0]["id"])
+histories = bot.getHistoriesByID(conversation_id=conv_id)
 print(formatHistory(histories))
 ```
 - Delete a conversation
 ```python
-bot.removeConversation(index=0)
+bot.removeConversation(conversation_id=conv_id)
 ```
 - Create a new conversation
 ```python
@@ -73,12 +74,14 @@ message = bot.chat(
     conversation_id=conversation_id,
     web_search=True,
     max_tries=2,
-    callback=(bot.updateTitle, (conversation_id,))
+    # callback=(bot.updateTitle, (conversation_id,))
 )
 # wait the full text or...
-while not message.isDone():
+while not message.web_search_done:
     time.sleep(0.1)
 print(message.getWebSearchSteps())
+while not message.isDone():
+    time.sleep(0.1)
 print(message.getFinalText())
 # get the stream text instantly
 print(message.getWebSearchSteps())
@@ -107,12 +110,13 @@ cookies = sign.login(save=True, cookie_dir_path=COOKIE_STORE_PATH)
 bot = HUG.getBot(email=EMAIL, cookies=cookies)
 # get all conversations and see one's title
 conversations = bot.getConversations()
-print(conversations[0]["title"])
+conv_id = list(conversations.keys())[0]
+print(conversations[conv_id])
 # get all chat histories by conversation_id
-histories = bot.getHistoriesByID(conversation_id=conversations[0]["id"])
+histories = bot.getHistoriesByID(conversation_id=conv_id)
 print(formatHistory(histories))
 # delete a conversation
-bot.removeConversation(index=0)
+bot.removeConversation(conversation_id=conv_id)
 # create a new conversation
 conversation_id = bot.createConversation()
 # chat
@@ -121,12 +125,14 @@ message = bot.chat(
     conversation_id=conversation_id,
     web_search=True,
     max_tries=2,
-    callback=(bot.updateTitle, (conversation_id,))
+    # callback=(bot.updateTitle, (conversation_id,))
 )
 # wait the full text or...
-while not message.isDone():
+while not message.web_search_done:
     time.sleep(0.1)
 print(message.getWebSearchSteps())
+while not message.isDone():
+    time.sleep(0.1)
 print(message.getFinalText())
 # get the stream text instantly
 print(message.getWebSearchSteps())
@@ -174,13 +180,10 @@ Anything not start with `/` will be seen as chat message.
 Example:
 ```text
 (None) > /ls
-#* Conversations that have been established:
+#* Conversations established:
 #
-#        0. Assistant: "It's February 24th."
-#        1. Today is Wednesday, July 12th, 2034
-#        2. "What is today's date?"
-#        3. "April 2nd."
-#
+#       0. [649471fa525d2d2474973871] - Hello there! How can I help you? Let me know if you need something specific done.
+#       1. [64946fb2525d2d247497382c] - Hi there! How can I assist you?
 
 (None) > /cd 0
 (647e09ccabd9de3d82d6fba0) > hi
