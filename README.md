@@ -197,3 +197,7 @@ Example:
 ```
 
 </details>
+
+## Download status
+seperated in regions(country_code). powered by bigquery and mermaid.
+![test](http://47.94.146.109:8000/.md)
