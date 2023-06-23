@@ -2,8 +2,6 @@
 
 **You Star You Win A BILLION$$$(maybe,it's not impossible that it would happen)**
 
-**Leave a star and you could win a billion(**
-
 > This is my first pypi project. Experienced some annoying moments, but i managed to do it anyway
 
 [![PyPI version](https://img.shields.io/pypi/v/hugchat-api.svg)](https://pypi.python.org/pypi/hugchat-api/)
