@@ -1,6 +1,6 @@
 import logging
 import os
-import re
+# import re
 import requests
 
 import requests.utils
@@ -19,6 +19,8 @@ class Sign:
         }
         self.cookies = requests.sessions.RequestsCookieJar()
         
+        self.DEFAULT_PATH_DIR = os.path.dirname(os.path.abspath(__file__)) + "/usercookies"
+        self.DEFAULT_COOKIE_PATH = self.DEFAULT_PATH_DIR + f"/{email}.json"
         # self.COOKIE_DIR = os.path.dirname(os.path.abspath(__file__)) + "/usercookies"
         # self.COOKIE_PATH = self.COOKIE_DIR + f"/{self.email}.json"
         # if not os.path.exists(self.COOKIE_DIR):
@@ -86,28 +88,35 @@ class Sign:
             raise Exception("Something went wrong!")
     
     def _grantAuth(self, url: str) -> int:
-        res = self._requestsGet(url)
-        if res.status_code != 200:
-            raise Exception("grant auth fatal!")
-        csrf = re.findall('/oauth/authorize.*?name="csrf" value="(.*?)"', res.text)
-        if len(csrf) == 0:
-            raise Exception("No csrf found!")
-        data = {
-            "csrf": csrf[0]
-        }
-        
-        res = self._requestsPost(url, data=data, allow_redirects=False)
-        if res.status_code != 303:
-            raise Exception(f"get hf-chat cookies fatal! - {res.status_code}")
-        else:
-            location = res.headers.get("Location")
-        res = self._requestsGet(location, allow_redirects=False)
-        if res.status_code != 302:
-            raise Exception(f"get hf-chat cookie fatal! - {res.status_code}")
-        else:
-            return 1
+        res = self._requestsGet(url, allow_redirects=False)
+        if res.headers.__contains__("location"):
+            location = res.headers["location"]
+            res = self._requestsGet(location, allow_redirects=False)
+            if res.cookies.__contains__("hf-chat"):
+                return 1
+        raise Exception("grantAuth fatal")
+        # if res.status_code != 200:
+        #     raise Exception("grant auth fatal!")
+        # csrf = re.findall('/oauth/authorize.*?name="csrf" value="(.*?)"', res.text)
+        # if len(csrf) == 0:
+        #     raise Exception("No csrf found!")
+        # data = {
+        #     "csrf": csrf[0]
+        # }
+        #
+        # res = self._requestsPost(url, data=data, allow_redirects=False)
+        # if res.status_code != 303:
+        #     raise Exception(f"get hf-chat cookies fatal! - {res.status_code}")
+        # else:
+        #     location = res.headers.get("Location")
+        # res = self._requestsGet(location, allow_redirects=False)
+        # if res.status_code != 302:
+        #     raise Exception(f"get hf-chat cookie fatal! - {res.status_code}")
+        # else:
+        #     return 1
     
-    def saveCookiesToDir(self, cookie_dir_path: str) -> str:
+    def saveCookiesToDir(self, cookie_dir_path: str = None) -> str:
+        cookie_dir_path = self.DEFAULT_PATH_DIR if not cookie_dir_path else cookie_dir_path
         if not cookie_dir_path.endswith("/"):
             cookie_dir_path += "/"
         cookie_path = cookie_dir_path + f"{self.email}.json"
@@ -131,7 +140,8 @@ class Sign:
                 return cookie_dir_path + i
         return ""
     
-    def loadCookiesFromDir(self, cookie_dir_path: str) -> requests.sessions.RequestsCookieJar:
+    def loadCookiesFromDir(self, cookie_dir_path: str = None) -> requests.sessions.RequestsCookieJar:
+        cookie_dir_path = self.DEFAULT_PATH_DIR if not cookie_dir_path else cookie_dir_path
         cookie_path = self._getCookiePath(cookie_dir_path)
         if not cookie_path:
             raise Exception(f"Cookie not found. please check the path given: {cookie_dir_path}.\n" +
@@ -147,21 +157,20 @@ class Sign:
             except:
                 raise Exception("load cookies from files fatal. Please check the format")
     
-    def login(self, save: bool = False, cookie_dir_path: str = "") -> requests.sessions.RequestsCookieJar:
+    def login(self, save: bool = False, cookie_dir_path: str = None) -> requests.sessions.RequestsCookieJar:
         self._SigninWithEmail()
         location = self._getAuthURL()
         if self._grantAuth(location):
             pass
         if save:
-            if not cookie_dir_path:
-                raise Exception("Please specify where to store your cookies")
             self.saveCookiesToDir(cookie_dir_path)
         return self.cookies
 
 
 if __name__ == "__main__":
-    email = ""
-    passwd = ""
+    email = os.getenv("EMAIL")
+    passwd = os.getenv("PASSWD")
     sign = Sign(email, passwd)
     cookies = sign.login()
+    sign.saveCookiesToDir()
     print(cookies)

@@ -11,7 +11,7 @@ from .core.Sign import Sign
 from .core.Bot import Bot
 from .utils import color, formatHistory, formatConversations, getTextFromInput, getIdByIndex
 
-COOKIE_DIR_PATH = os.path.abspath(os.path.dirname(__file__)) + "/usercookies"
+# COOKIE_DIR_PATH = os.path.abspath(os.path.dirname(__file__)) + "/usercookies"
 # CONSOLE = Console()
 hug = HuggingChat()
 
@@ -24,7 +24,7 @@ logging.getLogger().setLevel(logging.INFO)
 def checkCookies(u):
     login = Sign(u, None)
     try:
-        login.loadCookiesFromDir(COOKIE_DIR_PATH)
+        login.loadCookiesFromDir()
         return True
     except Exception as e:
         # print(e)
@@ -35,16 +35,16 @@ def login(u, p=None, force=False):
     if not p:
         logging.info(f"No Password input, trying to load it from mysql or files")
         login = Sign(u, p)
-        cookies = login.loadCookiesFromDir(COOKIE_DIR_PATH)
+        cookies = login.loadCookiesFromDir()
     else:
         login = Sign(u, p)
         if force:
-            cookies = login.login(save=True, cookie_dir_path=COOKIE_DIR_PATH)
+            cookies = login.login(save=True)
         else:
             try:
-                cookies = login.loadCookiesFromDir(COOKIE_DIR_PATH)
+                cookies = login.loadCookiesFromDir()
             except:
-                cookies = login.login(save=True, cookie_dir_path=COOKIE_DIR_PATH)
+                cookies = login.login(save=True)
     return cookies
 
 
@@ -200,5 +200,5 @@ def main(EMAIL, PASSWD):
 
 if __name__ == "__main__":
     EMAIL = os.getenv("EMAIL")
-    PASSWD = ""
+    PASSWD = os.getenv("PASSWD")
     main(EMAIL, PASSWD)

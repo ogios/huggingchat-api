@@ -1,6 +1,8 @@
 Pipfile
 Pipfile.lock
 main.py
+*.csv
+*.html
 
 .idea/
 TestArea/
