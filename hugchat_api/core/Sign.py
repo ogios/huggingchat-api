@@ -1,6 +1,6 @@
 import logging
 import os
-# import re
+import re
 import requests
 
 import requests.utils
@@ -94,26 +94,26 @@ class Sign:
             res = self._requestsGet(location, allow_redirects=False)
             if res.cookies.__contains__("hf-chat"):
                 return 1
-        raise Exception("grantAuth fatal")
-        # if res.status_code != 200:
-        #     raise Exception("grant auth fatal!")
-        # csrf = re.findall('/oauth/authorize.*?name="csrf" value="(.*?)"', res.text)
-        # if len(csrf) == 0:
-        #     raise Exception("No csrf found!")
-        # data = {
-        #     "csrf": csrf[0]
-        # }
-        #
-        # res = self._requestsPost(url, data=data, allow_redirects=False)
-        # if res.status_code != 303:
-        #     raise Exception(f"get hf-chat cookies fatal! - {res.status_code}")
-        # else:
-        #     location = res.headers.get("Location")
-        # res = self._requestsGet(location, allow_redirects=False)
-        # if res.status_code != 302:
-        #     raise Exception(f"get hf-chat cookie fatal! - {res.status_code}")
-        # else:
-        #     return 1
+        # raise Exception("grantAuth fatal")
+        if res.status_code != 200:
+            raise Exception("grant auth fatal!")
+        csrf = re.findall('/oauth/authorize.*?name="csrf" value="(.*?)"', res.text)
+        if len(csrf) == 0:
+            raise Exception("No csrf found!")
+        data = {
+            "csrf": csrf[0]
+        }
+
+        res = self._requestsPost(url, data=data, allow_redirects=False)
+        if res.status_code != 303:
+            raise Exception(f"get hf-chat cookies fatal! - {res.status_code}")
+        else:
+            location = res.headers.get("Location")
+        res = self._requestsGet(location, allow_redirects=False)
+        if res.status_code != 302:
+            raise Exception(f"get hf-chat cookie fatal! - {res.status_code}")
+        else:
+            return 1
     
     def saveCookiesToDir(self, cookie_dir_path: str = None) -> str:
         cookie_dir_path = self.DEFAULT_PATH_DIR if not cookie_dir_path else cookie_dir_path
