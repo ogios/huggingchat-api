@@ -45,7 +45,7 @@ cookies = sign.loadCookiesFromDir(cookie_dir_path=COOKIE_STORE_PATH)
 
 - Create Bot
 ```python
-bot = HUG.getBot(email=EMAIL, cookies=cookies)
+bot = HUG.getBot(email=EMAIL, cookies=cookies, model=ListBots.<model name>)
 ```
 - Get all conversations & Print title
 ```python
@@ -92,34 +92,47 @@ print(message.getText())
 
 ```python
 import os, time
+
 from hugchat_api import HuggingChat
+from hugchat_api.core import ListBots
 from hugchat_api.utils import formatHistory, formatConversations
 
-EMAIL = os.getenv("EMAIL_QQ")
-PASSWD = ""
+EMAIL = os.getenv("EMAIL")
+PASSWD = os.getenv("PASSWD")
 COOKIE_STORE_PATH = "./usercookies"
 
-# create ThreadPool
-HUG = HuggingChat(max_thread=1)       
+'''create ThreadPool'''
+HUG = HuggingChat(max_thread=1)
 
-# initialize sign in funciton
-sign = HUG.getSign(EMAIL, PASSWD)   
-# sign in or...
+
+'''initialize sign in funciton'''
+sign = HUG.getSign(EMAIL, PASSWD)
+
+'''sign in or...'''
 cookies = sign.login(save=True, cookie_dir_path=COOKIE_STORE_PATH)
-# create bot
-bot = HUG.getBot(email=EMAIL, cookies=cookies)
-# get all conversations and see one's title
+# cookies = sign.loadCookiesFromDir()
+
+
+
+'''create bot with MetaAI's model'''
+bot = HUG.getBot(email=EMAIL, cookies=cookies, model=ListBots.META_70B_HF)
+
+'''get all conversations and see one's title'''
 conversations = bot.getConversations()
 conv_id = list(conversations.keys())[0]
 print(conversations[conv_id])
-# get all chat histories by conversation_id
+
+'''get all chat histories by conversation_id'''
 histories = bot.getHistoriesByID(conversation_id=conv_id)
 print(formatHistory(histories))
-# delete a conversation
+
+'''delete a conversation'''
 bot.removeConversation(conversation_id=conv_id)
-# create a new conversation
+
+'''create a new conversation'''
 conversation_id = bot.createConversation()
-# chat
+
+'''chat'''
 message = bot.chat(
     text="hi",
     conversation_id=conversation_id,
@@ -127,14 +140,18 @@ message = bot.chat(
     max_tries=2,
     # callback=(bot.updateTitle, (conversation_id,))
 )
-# wait the full text or...
+
+
+
+'''wait the full text or...'''
 while not message.web_search_done:
     time.sleep(0.1)
 print(message.getWebSearchSteps())
 while not message.isDone():
     time.sleep(0.1)
 print(message.getFinalText())
-# get the stream text instantly
+
+'''get the stream text instantly'''
 print(message.getWebSearchSteps())
 print(message.getText())
 ```
@@ -188,12 +205,12 @@ Example:
 (None) > /cd 0
 (647e09ccabd9de3d82d6fba0) > hi
 #(user): hi
-#(Open-Assistant): ...
+#(HFBot): ...
 (647e09ccabd9de3d82d6fba0) > /web
 #WEB_SEARCH is set to `True`
 (647e09ccabd9de3d82d6fba0) > hi
 # ...(steps about web search)
-#(Open-Assistant): ...
+#(HFBot): ...
 ```
 
 </details>

@@ -10,6 +10,7 @@ from .core.Message import Message
 from .core.Sign import Sign
 from .core.Bot import Bot
 from .utils import color, formatHistory, formatConversations, getTextFromInput, getIdByIndex
+from .core import ListBots
 
 # COOKIE_DIR_PATH = os.path.abspath(os.path.dirname(__file__)) + "/usercookies"
 # CONSOLE = Console()
@@ -57,7 +58,7 @@ def updateMSG(message: Message):
         time.sleep(0.5)
         
     msg = message.getFinalText()
-    string = f"({color('Open-Assistant', 'blue')}): {msg}"
+    string = f"({color('HFBot: ', 'blue')}): {msg}"
     print(string)
     # try:
     #     markdown = Markdown(string)
@@ -133,7 +134,7 @@ def main(EMAIL, PASSWD):
     
     cookies = login(u, p, force)
     print(f"You are now logged in as <{u}>")
-    bot: Bot = hug.getBot(u, cookies=cookies)
+    bot: Bot.Bot = hug.getBot(u, cookies=cookies, model=ListBots.META_70B_HF)
     gc.collect()
     while 1:
         try:

@@ -13,6 +13,9 @@ from .Message import Message
 from .ThreadPool import ThreadPool
 from ..utils import getTime
 from .Exceptions import *
+from . import ListBots
+
+
 
 
 class Bot:
@@ -21,7 +24,7 @@ class Bot:
             email: str,
             cookies: requests.sessions.RequestsCookieJar,
             thread_pool: ThreadPool,
-            model: str = "OpenAssistant/oasst-sft-6-llama-30b-xor",
+            model: str = ListBots.OPENASSISTENT_30B_XOR,
     ):
         self.thread_pool: ThreadPool = thread_pool
         self.email = email

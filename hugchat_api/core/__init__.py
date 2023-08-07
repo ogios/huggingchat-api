@@ -1,10 +1,10 @@
-from concurrent.futures import ThreadPoolExecutor
 from requests.sessions import RequestsCookieJar
-from requests import sessions
+
 
 from .Bot import Bot
 from .Sign import Sign
 from .ThreadPool import ThreadPool
+from . import ListBots
 
 
 class HuggingChat:
@@ -12,11 +12,12 @@ class HuggingChat:
         # self.thread_pool = ThreadPoolExecutor(max_workers=max_thread)
         self.thread_pool = ThreadPool(max_thread)
     
-    def getBot(self, email: str, cookies: RequestsCookieJar):
+    def getBot(self, email: str, cookies: RequestsCookieJar, model: str = ListBots.OPENASSISTENT_30B_XOR):
         bot = Bot(
             email=email,
             cookies=cookies,
-            thread_pool=self.thread_pool
+            thread_pool=self.thread_pool,
+            model=model,
         )
         return bot
     
