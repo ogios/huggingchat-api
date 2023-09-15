@@ -3,8 +3,10 @@ Pipfile.lock
 main.py
 *.csv
 *.html
+pyrightconfig.json
 
 .idea/
 TestArea/
 usercookies/
 __pycache__/
+.mypy_cache

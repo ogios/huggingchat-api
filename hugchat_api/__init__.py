@@ -1,7 +1,7 @@
 from .core import *
 
 
-VERSION = (0, 0, 1, 5)
+VERSION = (0, 0, 1, 6)
 
 __author__ = "ogios"
 __email__ = "2134692955@qq.com"

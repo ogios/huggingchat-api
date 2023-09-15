@@ -24,7 +24,7 @@ class Bot:
             email: str,
             cookies: requests.sessions.RequestsCookieJar,
             thread_pool: ThreadPool,
-            model: str = ListBots.OPENASSISTENT_30B_XOR,
+            model: str = ListBots.FALCON_180B,
     ):
         self.thread_pool: ThreadPool = thread_pool
         self.email = email
@@ -112,9 +112,9 @@ class Bot:
     
     def customizeData(
             self,
-            temperature: int = 0.9,
-            top_p: int = 0.95,
-            repetition_penalty: int = 1.2,
+            temperature: float = 0.9,
+            top_p: float = 0.95,
+            repetition_penalty: float = 1.2,
             top_k: int = 50,
             truncate: int = 1024,
             watermark: bool = False,

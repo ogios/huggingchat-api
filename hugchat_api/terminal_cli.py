@@ -2,6 +2,8 @@ import gc, os, argparse, time
 import getpass
 import logging
 import traceback
+import asyncio
+import typing
 # from rich.console import Console
 # from rich.markdown import Markdown
 
@@ -49,49 +51,114 @@ def login(u, p=None, force=False):
     return cookies
 
 
-def updateMSG(message: Message):
-    # global FLAG
-    while not message.done:
-        if message.error:
-            logging.error(str(message.error))
-            return
-        time.sleep(0.5)
-        
-    msg = message.getFinalText()
-    string = f"({color('HFBot: ', 'blue')}): {msg}"
-    print(string)
-    # try:
-    #     markdown = Markdown(string)
-    #     CONSOLE.print(markdown)
-    # except:
-    #     print(string)
+# def updateMSG(message: Message):
+#     # global FLAG
+#     while not message.done:
+#         if message.error:
+#             logging.error(str(message.error))
+#             return
+#         time.sleep(0.5)
+#         
+#     msg = message.getFinalText()
+#     string = f"({color('HFBot: ', 'blue')}): {msg}"
+#     print(string)
+#     # try:
+#     #     markdown = Markdown(string)
+#     #     CONSOLE.print(markdown)
+#     # except:
+#     #     print(string)
+#
+#
+# def updateWebSearch(message: Message):
+#     if not message.web_search_enabled:
+#         return
+#     # length = 0
+#     while not message.web_search_done:
+#         # c = message.getWebSearchSteps()
+#         # if len(c) > length:
+#         #     for i in c[length-1:]:
+#         #         print(i)
+#         #         length += 1
+#         time.sleep(0.5)
+#     # print("======")
+#     # print("======")
+#     print(message.web_search_steps)
+#     # if js["type"] == "web_search" and js.__contains__("data"):
+#     #     data: dict = js["data"]
+#     #     if data["type"] == "update" and data.__contains__("message"):
+#     #         string = f"* {data['message']}{' - ' + str(data['args']) if data.__contains__('args') else ''}"
+#     #         print(string)
+#     #     elif data["type"] == "result":
+#     #         print(f"* result - {data['id']}")
+#     #     else:
+#     #         logging.error(f"Wrong step: {js}")
+#     # else:
+#     #     logging.error(f"Wrong step: {js}")
+
+class Notice:
+    _notice: int = 0
+    async def waitForAccept(self):
+        while self._notice:
+            await asyncio.sleep(0.1)
+    def notice(self):
+        self._notice = 1
+    def accept(self) -> int:
+        if self._notice:
+            self._notice = 0
+            return 1
+        else:
+            return 0
+            
+
+async def wait(message: Message, lock: Notice):
+    if message.web_search_enabled:
+        while not message.web_search_done:
+            await asyncio.sleep(0.01)
+        else:
+            lock.notice()
+            await lock.waitForAccept()
+            print(f"\r{message.web_search_steps}", flush=True)
+    while not message.isDone():
+        await asyncio.sleep(0.01)
+    else:
+        lock.notice()
+        await lock.waitForAccept()
+        msg = message.getFinalText()
+        string = f"\r({color('HFBot', 'blue')}): {msg}"
+        print(string, flush=True)
 
 
-def updateWebSearch(message: Message):
-    if not message.web_search_enabled:
-        return
-    # length = 0
-    while not message.web_search_done:
-        # c = message.getWebSearchSteps()
-        # if len(c) > length:
-        #     for i in c[length-1:]:
-        #         print(i)
-        #         length += 1
-        time.sleep(0.5)
-    # print("======")
-    # print("======")
-    print(message.web_search_steps)
-    # if js["type"] == "web_search" and js.__contains__("data"):
-    #     data: dict = js["data"]
-    #     if data["type"] == "update" and data.__contains__("message"):
-    #         string = f"* {data['message']}{' - ' + str(data['args']) if data.__contains__('args') else ''}"
-    #         print(string)
-    #     elif data["type"] == "result":
-    #         print(f"* result - {data['id']}")
-    #     else:
-    #         logging.error(f"Wrong step: {js}")
-    # else:
-    #     logging.error(f"Wrong step: {js}")
+
+def printWait() -> typing.Callable:
+    tick = time.time()
+    index = 0
+    count = 3
+    def c():
+        nonlocal tick, index
+        if time.time() - tick >= 0.5:
+            tick = time.time()
+            content = ["."] * count
+            content[index] = "·"
+            index = (index + 1) % count
+            print(f"\r{''.join(content)}", flush=True, end="")
+    return c
+    
+
+async def waitAndPrint(message: Message, lock: Notice):
+    print_wait = printWait()
+    if message.web_search_enabled:
+        while True:
+            if lock.accept():
+                break
+            print_wait()
+            await asyncio.sleep(0.01)
+    while True:
+        if lock.accept():
+            break
+        print_wait()
+        await asyncio.sleep(0.01)
+
+
 
 
 def changeWeb_search():
@@ -100,7 +167,7 @@ def changeWeb_search():
     print(f"WEB_SEARCH is set to `{WEB_SEARCH}`")
 
 
-def main(EMAIL, PASSWD):
+async def main(EMAIL: str, PASSWD: str, loop: asyncio.AbstractEventLoop):
     # global FLAG
     global WEB_SEARCH
     global NEW_CONVERSATION
@@ -134,7 +201,7 @@ def main(EMAIL, PASSWD):
     
     cookies = login(u, p, force)
     print(f"You are now logged in as <{u}>")
-    bot: Bot.Bot = hug.getBot(u, cookies=cookies, model=ListBots.META_70B_HF)
+    bot: Bot.Bot = hug.getBot(u, cookies=cookies, model=ListBots.FALCON_180B)
     gc.collect()
     while 1:
         try:
@@ -157,7 +224,7 @@ def main(EMAIL, PASSWD):
                     try:
                         tmp_id = getIdByIndex(bot.conversations, int(command[1]))
                         bot.switchConversation(tmp_id)
-                    except:
+                    except Exception:
                         print("cd fatal")
                 elif command[0] == "rm":
                     try:
@@ -192,14 +259,22 @@ def main(EMAIL, PASSWD):
                     web_search=WEB_SEARCH,
                     # callback=(bot.updateTitle, (bot.current_conversation,)) if NEW_CONVERSATION else None
                 )
-                updateWebSearch(message)
-                updateMSG(message)
+                lock = Notice()
+                loop.create_task(waitAndPrint(message, lock))
+                await wait(message, lock)
+                # updateWebSearch(message)
+                # updateMSG(message)
                 # FLAG = True
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
 
 
 if __name__ == "__main__":
     EMAIL = os.getenv("EMAIL")
     PASSWD = os.getenv("PASSWD")
-    main(EMAIL, PASSWD)
+    event_loop = asyncio.get_event_loop()
+    try:
+        event_loop.run_until_complete(main(EMAIL, PASSWD, event_loop))
+    except Exception:
+        traceback.print_exc()
+        event_loop.close()

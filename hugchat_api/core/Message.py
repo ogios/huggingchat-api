@@ -5,11 +5,11 @@ class Message:
     def __init__(self, conversation_id: str, web_search_enabled: bool):
         self.done: bool = False
         self.stream_text: list = []
-        self.final_text: str = None
+        self.final_text: str | None = None
         self.web_search_enabled = web_search_enabled
         self.web_search_done = False
         self.web_search_steps = list()
-        self.error: Exception = None
+        self.error: Exception | None = None
         self.conversation_id: str = conversation_id
     
     def getConversation(self) -> str:
@@ -46,7 +46,7 @@ class Message:
         self.final_text = text
         self.done = True
     
-    def getFinalText(self) -> str:
+    def getFinalText(self) -> str | None:
         if self.error:
             raise Exception(self.error)
         return self.final_text
