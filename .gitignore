@@ -4,6 +4,7 @@ main.py
 *.csv
 *.html
 pyrightconfig.json
+test.py
 
 .idea/
 TestArea/

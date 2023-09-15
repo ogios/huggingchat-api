@@ -1,6 +1,14 @@
 import datetime
 from typing import List
+import uuid
 
+def getUUID():
+        """
+        random uuid
+        :return:  hex with the format '8-4-4-4-12'
+        """
+        uid = uuid.uuid4().hex
+        return f"{uid[:8]}-{uid[8:12]}-{uid[12:16]}-{uid[16:20]}-{uid[20:]}"
 
 def color(string, color: str) -> str:
     dic = {
