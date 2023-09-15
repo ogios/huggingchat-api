@@ -14,7 +14,6 @@ pip install hugchat-api
 ```
 
 ## Sign in
-Here's a example of how to log into huggingface and get cookies
 ```python
 import os
 from hugchat_api import HuggingChat
@@ -45,7 +44,7 @@ cookies = sign.loadCookiesFromDir(cookie_dir_path=COOKIE_STORE_PATH)
 
 - Create Bot
 ```python
-bot = HUG.getBot(email=EMAIL, cookies=cookies, model=ListBots.<model name>)
+bot = HUG.getBot(email=EMAIL, cookies=cookies, model=ListBots.<model_name>)
 ```
 - Get all conversations & Print title
 ```python
@@ -83,6 +82,7 @@ print(message.getWebSearchSteps())
 while not message.isDone():
     time.sleep(0.1)
 print(message.getFinalText())
+
 # get the stream text instantly
 print(message.getWebSearchSteps())
 print(message.getText())

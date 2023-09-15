@@ -11,20 +11,17 @@ from typing import Callable, Tuple
 from .WebSearch import WebSearch
 from .Message import Message
 from .ThreadPool import ThreadPool
-from ..utils import getTime
 from .Exceptions import *
 from . import ListBots
 
 
-
-
 class Bot:
     def __init__(
-            self,
-            email: str,
-            cookies: requests.sessions.RequestsCookieJar,
-            thread_pool: ThreadPool,
-            model: str = ListBots.FALCON_180B,
+        self,
+        email: str,
+        cookies: requests.sessions.RequestsCookieJar,
+        thread_pool: ThreadPool,
+        model: str = ListBots.FALCON_180B,
     ):
         self.thread_pool: ThreadPool = thread_pool
         self.email = email
@@ -37,10 +34,8 @@ class Bot:
             "truncate": 1024,
             "watermark": False,
             "max_new_tokens": 1024,
-            "stop": [
-                "</s>"
-            ],
-            "return_full_text": False
+            "stop": ["</s>"],
+            "return_full_text": False,
         }
         self.url_index = "https://huggingface.co/chat/"
         self.url_initConversation = "https://huggingface.co/chat/conversation"
@@ -54,7 +49,7 @@ class Bot:
         self.conversations = dict()
         self.current_conversation = None
         self.fetchConversations()
-    
+
     def fetchConversations(self):
         """
         Get conversation a from a html and extract them using re
@@ -63,16 +58,22 @@ class Bot:
         self.conversations = dict()
         res = self._requestsGet(self.url_index)
         html = res.text
-        conversation_ids = list(set(re.findall('href="/chat/conversation/(.*?)"', html)))
+        conversation_ids = list(
+            set(re.findall('href="/chat/conversation/(.*?)"', html))
+        )
         for i in conversation_ids:
-            title = re.findall(f'href="/chat/conversation/{i}.*?<div class="flex-1 truncate">(.*?)</div>', html, re.S)
+            title = re.findall(
+                f'href="/chat/conversation/{i}.*?<div class="flex-1 truncate">(.*?)</div>',
+                html,
+                re.S,
+            )
             if len(title) > 0:
                 title = title[0].strip()
             else:
                 title = "Untitled conversation"
             self.conversations[i] = title
             # self.conversations.append({"id": i, "title": title})
-    
+
     def _requestsGet(self, url: str, params=None, stream=False) -> requests.Response:
         """
         GET
@@ -86,8 +87,10 @@ class Bot:
             # verify=False,
         )
         return res
-    
-    def _requestsPost(self, url: str, headers=None, params=None, data=None, stream=False) -> requests.Response:
+
+    def _requestsPost(
+        self, url: str, headers=None, params=None, data=None, stream=False
+    ) -> requests.Response:
         """
         POST
         """
@@ -101,7 +104,7 @@ class Bot:
             # verify=False,
         )
         return res
-    
+
     def _getUUID(self):
         """
         random uuid
@@ -109,17 +112,17 @@ class Bot:
         """
         uid = uuid.uuid4().hex
         return f"{uid[:8]}-{uid[8:12]}-{uid[12:16]}-{uid[16:20]}-{uid[20:]}"
-    
+
     def customizeData(
-            self,
-            temperature: float = 0.9,
-            top_p: float = 0.95,
-            repetition_penalty: float = 1.2,
-            top_k: int = 50,
-            truncate: int = 1024,
-            watermark: bool = False,
-            max_new_tokens: int = 1024,
-            return_full_text: bool = False
+        self,
+        temperature: float = 0.9,
+        top_p: float = 0.95,
+        repetition_penalty: float = 1.2,
+        top_k: int = 50,
+        truncate: int = 1024,
+        watermark: bool = False,
+        max_new_tokens: int = 1024,
+        return_full_text: bool = False,
     ):
         return {
             "temperature": temperature,
@@ -129,12 +132,10 @@ class Bot:
             "truncate": truncate,
             "watermark": watermark,
             "max_new_tokens": max_new_tokens,
-            "stop": [
-                "</s>"
-            ],
-            "return_full_text": return_full_text
+            "stop": ["</s>"],
+            "return_full_text": return_full_text,
         }
-    
+
     def _getData(self, text, web_search_id: str = "", params: dict = None):
         """
         Default data
@@ -148,12 +149,12 @@ class Bot:
                 "response_id": self._getUUID(),
                 "is_retry": False,
                 "use_cache": False,
-                "web_search_id": web_search_id
+                "web_search_id": web_search_id,
             },
             "stream": True,
         }
         return data
-    
+
     def __parseData(self, res: requests.Response, message: Message):
         """
         Parser for EventStream
@@ -174,7 +175,9 @@ class Bot:
                         tempchunk = chunk
                         continue
                     try:
-                        if (js["token"]["special"] == True) & (js["generated_text"] != None):
+                        if (js["token"]["special"] is True) & (
+                            js["generated_text"] is not None
+                        ):
                             reply = js["generated_text"]
                             message.setFinalText(reply)
                         else:
@@ -185,7 +188,7 @@ class Bot:
                         # print(js)
         res.close()
         return reply
-    
+
     def _parseData(self, res: requests.Response, message: Message):
         try:
             reply = self.__parseData(res, message)
@@ -195,15 +198,14 @@ class Bot:
             # message.setError(e)
             return e
         return None
-    
+
     def _getReply(
-            self,
-            conversation_id: str,
-            text: str,
-            message: Message,
-            web_search_id: str = "",
-            max_tries: int = 3,
-            callback: Tuple[Callable, tuple] = None
+        self,
+        conversation_id: str,
+        text: str,
+        message: Message,
+        web_search_id: str = "",
+        max_tries: int = 3,
     ):
         """
         Send message and Parse response
@@ -220,57 +222,70 @@ class Bot:
                 if not exp:
                     if not self.conversations[conversation_id]:
                         self.updateTitle(conversation_id)
-                    if callback != None:
-                        callback[0](*callback[-1])
                     return
             time.sleep(1)
             continue
         message.setError(exp)
-    
+
     def _chatWeb(
-            self,
-            conversation_id: str,
-            text: str,
-            message: Message,
-            web_search_id: str = "",
-            max_tries: int = 3,
-            callback: Tuple[Callable, tuple] = None
+        self,
+        conversation_id: str,
+        text: str,
+        message: Message,
+        web_search_id: str = "",
+        max_tries: int = 3,
     ):
-        
         webUrl = self.url_initConversation + f"/{conversation_id}/web-search"
         js = WebSearch(
             webUrl + f"?prompt={text}",
             self.cookies.get_dict(),
             conversation_id,
-            message
+            message,
         ).getWebSearch()
         web_search_id = js["messages"][-1]["id"] if js else ""
         logging.info(f"web_search_id: {web_search_id}")
-        
-        self._getReply(conversation_id, text, message, web_search_id, max_tries, callback=callback)
-    
-    def chat(self, text: str, conversation_id=None, web_search=False, max_tries: int = 3, callback: Tuple[Callable, tuple] = None) -> Message:
+
+        self._getReply(
+            conversation_id, text, message, web_search_id, max_tries
+        )
+
+    def chat(
+        self,
+        text: str,
+        conversation_id=None,
+        web_search=False,
+        max_tries: int = 3,
+    ) -> Message:
         """
         Normal chat, send message and wait for reply
         """
-        conversation_id = self.current_conversation if not conversation_id else conversation_id
+        conversation_id = (
+            self.current_conversation if not conversation_id else conversation_id
+        )
         if not conversation_id:
             logging.info("No conversation selected")
             return None
         message = Message(conversation_id, web_search)
-        
+
         if web_search:
-            self.thread_pool.submit(self._chatWeb, (conversation_id, text, message, "", max_tries, callback))
+            self.thread_pool.submit(
+                self._chatWeb, (conversation_id, text, message, "", max_tries)
+            )
         else:
-            self.thread_pool.submit(self._getReply, (conversation_id, text, message, "", max_tries, callback))
+            self.thread_pool.submit(
+                self._getReply,
+                (conversation_id, text, message, "", max_tries),
+            )
         return message
-    
+
     def updateTitle(self, conversation_id) -> str:
         """
         Get conversation summary
         """
         if not self.conversations.__contains__(conversation_id):
-            raise ConversationNotExistError(f"The given conversation is not in the map: {conversation_id}")
+            raise ConversationNotExistError(
+                f"The given conversation is not in the map: {conversation_id}"
+            )
         url = self.url_initConversation + f"/{conversation_id}/summarize"
         res = self._requestsPost(url)
         if res.status_code != 200:
@@ -282,7 +297,7 @@ class Bot:
         #         self.conversations[i]["title"] = js["title"]
         #         break
         return js["title"]
-    
+
     def createConversation(self) -> str:
         """
         start a new conversation
@@ -299,13 +314,15 @@ class Bot:
         # self.conversations.append(conversation)
         self.current_conversation = conversation_id
         return conversation_id
-    
+
     def removeConversation(self, conversation_id: str):
         """
         Remove conversation through the index of self.conversations
         """
         if not self.conversations.__contains__(conversation_id):
-            raise ConversationNotExistError(f"The given conversation is not in the map: {conversation_id}")
+            raise ConversationNotExistError(
+                f"The given conversation is not in the map: {conversation_id}"
+            )
         logging.info(f"Deleting conversation <{conversation_id}>")
         url = self.url_initConversation + f"/{conversation_id}"
         res = requests.delete(url, headers=self.headers, cookies=self.cookies)
@@ -316,7 +333,7 @@ class Bot:
         del self.conversations[conversation_id]
         if self.current_conversation == conversation_id:
             self.current_conversation = None
-    
+
     def _getHistoriesByID(self, conversation_id):
         """
         :return: [{
@@ -327,7 +344,10 @@ class Bot:
         }]
         """
         histories = []
-        url = self.url_initConversation + f"/{conversation_id}/__data.json?x-sveltekit-invalidated=_1"
+        url = (
+            self.url_initConversation
+            + f"/{conversation_id}/__data.json?x-sveltekit-invalidated=_1"
+        )
         res = self._requestsGet(url)
         if res.status_code != 200:
             return None
@@ -340,31 +360,37 @@ class Bot:
             for his in history:
                 if isinstance(his, dict):
                     if his.__contains__("content"):
-                        histories.append({
-                            "conversation_id": conversation_id,
-                            "is_user": 1 if history[his["from"]] == "user" else 0,
-                            "text": history[his["content"]],
-                            "text_id": history[his["id"]],
-                        })
+                        histories.append(
+                            {
+                                "conversation_id": conversation_id,
+                                "is_user": 1 if history[his["from"]] == "user" else 0,
+                                "text": history[his["content"]],
+                                "text_id": history[his["id"]],
+                            }
+                        )
         return histories
-    
+
     def getHistoriesByID(self, conversation_id=None) -> list:
-        conversation_id = self.current_conversation if not conversation_id else conversation_id
+        conversation_id = (
+            self.current_conversation if not conversation_id else conversation_id
+        )
         if not conversation_id:
             return []
         logging.info(f"Getting histories for {self.email}:{conversation_id}...")
         histories = self._getHistoriesByID(conversation_id)
-        if histories == None:
+        if histories is None:
             raise Exception("Something went wrong")
         else:
             return histories
-    
+
     def getConversations(self) -> dict:
         return self.conversations
-    
+
     def switchConversation(self, conversation_id: str):
         if not self.conversations.__contains__(conversation_id):
-            raise ConversationNotExistError(f"The given conversation is not in the map: {conversation_id}")
+            raise ConversationNotExistError(
+                f"The given conversation is not in the map: {conversation_id}"
+            )
         self.current_conversation = conversation_id
 
 
