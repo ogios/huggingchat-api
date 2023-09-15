@@ -13,6 +13,7 @@ from .Message import Message
 from .ThreadPool import ThreadPool
 from .Exceptions import *
 from . import ListBots
+from .config import getDefaultData
 
 
 class Bot:
@@ -105,42 +106,14 @@ class Bot:
         )
         return res
 
-    def _getUUID(self):
-        """
-        random uuid
-        :return:  hex with the format '8-4-4-4-12'
-        """
-        uid = uuid.uuid4().hex
-        return f"{uid[:8]}-{uid[8:12]}-{uid[12:16]}-{uid[16:20]}-{uid[20:]}"
 
-    def customizeData(
-        self,
-        temperature: float = 0.9,
-        top_p: float = 0.95,
-        repetition_penalty: float = 1.2,
-        top_k: int = 50,
-        truncate: int = 1024,
-        watermark: bool = False,
-        max_new_tokens: int = 1024,
-        return_full_text: bool = False,
-    ):
-        return {
-            "temperature": temperature,
-            "top_p": top_p,
-            "repetition_penalty": repetition_penalty,
-            "top_k": top_k,
-            "truncate": truncate,
-            "watermark": watermark,
-            "max_new_tokens": max_new_tokens,
-            "stop": ["</s>"],
-            "return_full_text": return_full_text,
-        }
 
     def _getData(self, text, web_search_id: str = "", params: dict = None):
         """
         Default data
         """
         web_search_id = "" if not web_search_id else web_search_id
+        d = getDefaultData()
         data = {
             "inputs": text,
             "parameters": params if params else self.default_params,
