@@ -27,6 +27,7 @@ setup(
     },
     install_requires=[
         "requests",
+        "dataclasses-json",
     ],
     extras_require={
         "curl": ["pycurl"],

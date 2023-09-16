@@ -1,53 +1,56 @@
 from dataclasses import dataclass
+from dataclasses_json import dataclass_json, DataClassJsonMixin
 from typing import List
-from hugchat_api.core.Exceptions import FillDataException
 
 from hugchat_api.utils import getUUID
 
 
+@dataclass_json
 @dataclass
-class ModelConfig:
+class ModelConfig(DataClassJsonMixin):
     """
     Generation Parameters
     """
 
-    temperature: float
-    top_p: float
-    repetition_penalty: float
-    top_k: int
-    truncate: int
-    watermark: bool
-    max_new_tokens: int
-    return_full_text: bool
-    stop: List[str]
+    temperature: float | None = None
+    top_p: float | None = None
+    repetition_penalty: float | None = None
+    top_k: int | None = None
+    truncate: int | None = None
+    watermark: bool | None = None
+    max_new_tokens: int | None = None
+    return_full_text: bool | None = None
+    stop: List[str] | None = None
 
 
+@dataclass_json
 @dataclass
-class RequestOptions:
-    id: str
+class RequestOptions(DataClassJsonMixin):
+    id: str | None = None
     """uuid"""
-    response_id: str
+    response_id: str | None = None
     """uuid"""
 
-    is_retry: bool
-    use_cache: bool
-    web_search_id: str
+    is_retry: bool | None = None
+    use_cache: bool | None = None
+    web_search_id: str | None = None
 
 
+@dataclass_json
 @dataclass
-class RequestData:
+class RequestData(DataClassJsonMixin):
     """
     Post request data (json format)
     """
 
-    inputs: str
+    inputs: str | None = None
     """prompt string"""
 
-    parameters: ModelConfig
+    parameters: ModelConfig | None = None
 
-    options: RequestOptions
+    options: RequestOptions | None = None
 
-    stream: bool
+    stream: bool | None = None
     """stream response?"""
 
 
@@ -72,9 +75,12 @@ def getDefaultData() -> RequestData:
     )
     return RequestData(inputs="", parameters=c, options=o, stream=True)
 
+
 def _fill(data: RequestData, ori: RequestData):
     prs = dir(ori)
     for key in prs:
+        if key.startswith("__"): 
+            continue
         if getattr(data, key) is None:
             setattr(data, key, getattr(ori, key))
         else:
@@ -83,14 +89,19 @@ def _fill(data: RequestData, ori: RequestData):
                     setattr(data, key, getattr(ori, key))
                 else: 
                     setattr(data, key, _fill(getattr(data, key), getattr(ori,key)))
-            else:
-                raise FillDataException(f"unknow property `{key}` type: `{type(getattr(data, key))}`")
     return data
 
 
-def fillData(data: RequestData) -> RequestData:
+def fillData(data: RequestData | None) -> RequestData:
     ori = getDefaultData()
     if not data:
         return ori
     return _fill(data, ori)
         
+if __name__ == "__main__":
+    c = ModelConfig(
+        max_new_tokens=1024,
+    )
+    d = RequestData(parameters=c)
+    d = fillData(d)
+    print(d.to_json())

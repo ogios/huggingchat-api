@@ -1,5 +1,5 @@
 class ConversationNotExistError(Exception):
-    pass
+    NotInMap: str = "The given conversation is not in the map: --id--"
 
 class FillDataException(Exception):
     pass
