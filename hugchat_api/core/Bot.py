@@ -1,19 +1,19 @@
 import logging
 import time
-import uuid
+from typing import Dict
 import requests
 import requests.utils
 import requests.sessions
 import json
 import re
-from typing import Callable, Tuple
 
 from .WebSearch import WebSearch
 from .Message import Message
 from .ThreadPool import ThreadPool
 from .Exceptions import *
 from . import ListBots
-from .config import getDefaultData
+from .config import RequestData, fillData
+from hugchat_api.utils import Request
 
 
 class Bot:
@@ -27,27 +27,11 @@ class Bot:
         self.thread_pool: ThreadPool = thread_pool
         self.email = email
         self.model = model
-        self.default_params = {
-            "temperature": 0.9,
-            "top_p": 0.95,
-            "repetition_penalty": 1.2,
-            "top_k": 50,
-            "truncate": 1024,
-            "watermark": False,
-            "max_new_tokens": 1024,
-            "stop": ["</s>"],
-            "return_full_text": False,
-        }
         self.url_index = "https://huggingface.co/chat/"
         self.url_initConversation = "https://huggingface.co/chat/conversation"
-        self.headers = {
-            "Referer": "https://huggingface.co/chat",
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
-        }
         self.cookies = cookies
         # self.conversations = list()
-        self.conversations = dict()
+        self.conversations: Dict[str, str] = dict()
         self.current_conversation = None
         self.fetchConversations()
 
@@ -57,7 +41,7 @@ class Bot:
         """
         logging.info("Fetching all conversations...")
         self.conversations = dict()
-        res = self._requestsGet(self.url_index)
+        res = Request.Get(self.url_index, self.cookies)
         html = res.text
         conversation_ids = list(
             set(re.findall('href="/chat/conversation/(.*?)"', html))
@@ -75,57 +59,17 @@ class Bot:
             self.conversations[i] = title
             # self.conversations.append({"id": i, "title": title})
 
-    def _requestsGet(self, url: str, params=None, stream=False) -> requests.Response:
-        """
-        GET
-        """
-        res = requests.get(
-            url,
-            params=params,
-            headers=self.headers,
-            cookies=self.cookies,
-            stream=stream,
-            # verify=False,
-        )
-        return res
 
-    def _requestsPost(
-        self, url: str, headers=None, params=None, data=None, stream=False
-    ) -> requests.Response:
+    def _getData(
+        self, text, web_search_id: str = "", provide_data: RequestData | None = None
+    ):
         """
-        POST
-        """
-        res = requests.post(
-            url,
-            stream=stream,
-            params=params,
-            data=data,
-            headers=self.headers if not headers else headers,
-            cookies=self.cookies,
-            # verify=False,
-        )
-        return res
-
-
-
-    def _getData(self, text, web_search_id: str = "", params: dict = None):
-        """
-        Default data
+        Fill the custom data with defaults
         """
         web_search_id = "" if not web_search_id else web_search_id
-        d = getDefaultData()
-        data = {
-            "inputs": text,
-            "parameters": params if params else self.default_params,
-            "options": {
-                "id": self._getUUID(),
-                "response_id": self._getUUID(),
-                "is_retry": False,
-                "use_cache": False,
-                "web_search_id": web_search_id,
-            },
-            "stream": True,
-        }
+        data = fillData(provide_data)
+        data.inputs = text
+        data.options.web_search_id = web_search_id
         return data
 
     def __parseData(self, res: requests.Response, message: Message):
@@ -144,7 +88,7 @@ class Bot:
                     try:
                         js = json.loads(chunk)
                         tempchunk = ""
-                    except:
+                    except Exception:
                         tempchunk = chunk
                         continue
                     try:
@@ -156,7 +100,7 @@ class Bot:
                         else:
                             reply = js["token"]["text"]
                             message.setText(reply)
-                    except:
+                    except Exception:
                         logging.error(str(js))
                         # print(js)
         res.close()
@@ -184,21 +128,23 @@ class Bot:
         Send message and Parse response
         """
         url = self.url_initConversation + f"/{conversation_id}"
-        exp = Exception("No reply")
+        err = Exception("No reply")
         data = self._getData(text, web_search_id)
-        for i in range(max_tries):
-            res = self._requestsPost(url, stream=True, data=json.dumps(data))
+        for _ in range(max_tries):
+            res = Request.Post(
+                url, cookies=self.cookies, stream=True, data=json.dumps(data)
+            )
             if res.status_code == 500:
                 logging.error("Internal error, may due to model overload, retrying...")
             else:
-                exp = self._parseData(res, message=message)
-                if not exp:
+                err = self._parseData(res, message=message)
+                if not err:
                     if not self.conversations[conversation_id]:
                         self.updateTitle(conversation_id)
                     return
             time.sleep(1)
             continue
-        message.setError(exp)
+        message.setError(err)
 
     def _chatWeb(
         self,
@@ -218,9 +164,7 @@ class Bot:
         web_search_id = js["messages"][-1]["id"] if js else ""
         logging.info(f"web_search_id: {web_search_id}")
 
-        self._getReply(
-            conversation_id, text, message, web_search_id, max_tries
-        )
+        self._getReply(conversation_id, text, message, web_search_id, max_tries)
 
     def chat(
         self,
@@ -228,7 +172,7 @@ class Bot:
         conversation_id=None,
         web_search=False,
         max_tries: int = 3,
-    ) -> Message:
+    ) -> Message | None:
         """
         Normal chat, send message and wait for reply
         """
@@ -257,34 +201,38 @@ class Bot:
         """
         if not self.conversations.__contains__(conversation_id):
             raise ConversationNotExistError(
-                f"The given conversation is not in the map: {conversation_id}"
+                ConversationNotExistError.NotInMap.replace("--id--", conversation_id)
             )
+        # request for title
         url = self.url_initConversation + f"/{conversation_id}/summarize"
-        res = self._requestsPost(url)
+        res = Request.Post(url, cookies=self.cookies)
         if res.status_code != 200:
             raise Exception("get conversation title failed")
         js = res.json()
+
+        # set title in map
         self.conversations[conversation_id] = js["title"]
-        # for i in range(len(self.conversations)):
-        #     if self.conversations[i]["id"] == conversation_id:
-        #         self.conversations[i]["title"] = js["title"]
-        #         break
         return js["title"]
 
     def createConversation(self) -> str:
         """
-        start a new conversation
+        Start a new conversation
         """
+
+        # Create new empty conversation
+        # with model defined
         data = {"model": self.model}
-        res = self._requestsPost(self.url_initConversation, data=json.dumps(data))
+        res = Request.Post(
+            self.url_initConversation, cookies=self.cookies, data=json.dumps(data)
+        )
         if res.status_code != 200:
             raise Exception("create conversation fatal")
         js = res.json()
+
+        # add conversation id(key) to map
+        # and set title to None
         conversation_id = js["conversationId"]
-        # message = self.chat(text, conversation_id, web=web)
         self.conversations[conversation_id] = None
-        # conversation = {"id": conversation_id, "title": "None"}
-        # self.conversations.append(conversation)
         self.current_conversation = conversation_id
         return conversation_id
 
@@ -294,41 +242,54 @@ class Bot:
         """
         if not self.conversations.__contains__(conversation_id):
             raise ConversationNotExistError(
-                f"The given conversation is not in the map: {conversation_id}"
+                ConversationNotExistError.NotInMap.replace("--id--", conversation_id)
             )
         logging.info(f"Deleting conversation <{conversation_id}>")
+
+        # Request for delete
         url = self.url_initConversation + f"/{conversation_id}"
-        res = requests.delete(url, headers=self.headers, cookies=self.cookies)
+        res = Request.Delete(url, cookies=self.cookies)
         if res.status_code != 200:
             logging.info(f"{res.text}")
             logging.info("Delete conversation fatal")
             raise Exception("Delete conversation fatal")
+
+        # delete it in map
         del self.conversations[conversation_id]
         if self.current_conversation == conversation_id:
             self.current_conversation = None
 
     def _getHistoriesByID(self, conversation_id):
         """
-        :return: [{
-            "conversation_id"
-            "is_user"
-            "text"
-            "text_id"
-        }]
+        :return:
+        [
+            {
+                "conversation_id"
+                "is_user"
+                "text"
+                "text_id"
+            }
+        ]
         """
         histories = []
+
+        # Get all histories
         url = (
             self.url_initConversation
             + f"/{conversation_id}/__data.json?x-sveltekit-invalidated=_1"
         )
-        res = self._requestsGet(url)
+        res = Request.Get(url, cookies=self.cookies)
         if res.status_code != 200:
             return None
+
+        # Check if histories exists
         data = res.json()["nodes"]
         history = None
         for dic in data:
             if dic.__contains__("data"):
                 history = dic["data"]
+
+        # Parse histories
         if history:
             for his in history:
                 if isinstance(his, dict):
@@ -362,7 +323,7 @@ class Bot:
     def switchConversation(self, conversation_id: str):
         if not self.conversations.__contains__(conversation_id):
             raise ConversationNotExistError(
-                f"The given conversation is not in the map: {conversation_id}"
+                ConversationNotExistError.NotInMap.replace("--id--", conversation_id)
             )
         self.current_conversation = conversation_id
 
