@@ -4,37 +4,15 @@ from typing import Callable, Dict
 import logging
 import json
 import re
-import time
 
 from hugchat_api.core.Chatflow import Chatflow
 from hugchat_api.core.CorotineLoop import CorotineLoop
 from hugchat_api.core.Message import Message
 from hugchat_api.core.Exceptions import ConversationNotExistError
 from hugchat_api.core import ListBots
-from hugchat_api.core.Workflow import Workflow
+from hugchat_api.core.Customflow import Customflow
 from hugchat_api.core.config import RequestData, BASE_URL, BASE_CONVERSATION
 from hugchat_api.utils import Request
-
-
-class Customflow(Workflow):
-    @staticmethod
-    def wait(fut: Future):
-        """
-        Wait for the `Future` to be Done.
-        To be noticed: The Exception will be raised if there is one.
-        """
-        while fut.done():
-            time.sleep(0.01)
-        return fut.result()
-
-    @staticmethod
-    def wrap(func: Callable):
-        c = Customflow()
-        c.run = func
-        return c
-
-    async def run(self):
-        pass
 
 
 class Bot:
@@ -70,6 +48,7 @@ class Bot:
             self.conversations = dict()
             res = await Request.Get(BASE_URL, self.cookies)
             html = await res.text()
+            res.close()
             conversation_ids = list(
                 set(re.findall('href="/chat/conversation/(.*?)"', html))
             )
@@ -125,6 +104,7 @@ class Bot:
     def updateTitle(self, conversation_id: str, wait: bool = True) -> Future | str:
         """
         Get conversation summary
+        Support async (by returning a Future).
         """
 
         # Run func
@@ -139,8 +119,10 @@ class Bot:
             url = f"{BASE_CONVERSATION}/{conversation_id}/summarize"
             res = await Request.Post(url, cookies=self.cookies)
             if res.status != 200:
+                res.close()
                 raise Exception("get conversation title failed")
             js = await res.json()
+            res.close()
 
             # set title in map
             self.conversations[conversation_id] = js["title"]
@@ -152,6 +134,7 @@ class Bot:
     def createConversation(self, wait: bool = True) -> Future | str:
         """
         Start a new conversation
+        Support async (by returning a Future).
         """
 
         # Run func
@@ -163,8 +146,10 @@ class Bot:
                 BASE_CONVERSATION, cookies=self.cookies, data=json.dumps(data)
             )
             if res.status != 200:
+                res.close()
                 raise Exception("create conversation fatal")
             js = await res.json()
+            res.close()
 
             # add conversation id(key) to map
             # and set title to None
@@ -176,26 +161,33 @@ class Bot:
         # Workflow
         return self.submitAndIfWait(run, wait)
 
-    def removeConversation(self, conversation_id: str):
+    def removeConversation(
+        self, conversation_id: str, wait: bool = True
+    ) -> Future | None:
         """
         Remove conversation through the index of self.conversations
+        Support async (by returning a Future).
         """
 
         # Run func
         async def run():
             if not self.conversations.__contains__(conversation_id):
                 raise ConversationNotExistError(
-                    ConversationNotExistError.NotInMap.replace("--id--", conversation_id)
+                    ConversationNotExistError.NotInMap.replace(
+                        "--id--", conversation_id
+                    )
                 )
 
             # Request for delete
             logging.info(f"Deleting conversation <{conversation_id}>")
             url = f"{BASE_CONVERSATION}/{conversation_id}"
-            res = Request.Delete(url, cookies=self.cookies)
-            if res.status_code != 200:
-                logging.info(f"{res.text}")
+            res = await Request.Delete(url, cookies=self.cookies)
+            if res.status != 200:
+                logging.info(f"{await res.text()}")
                 logging.info("Delete conversation fatal")
+                res.close()
                 raise Exception("Delete conversation fatal")
+            res.close()
 
             # delete it in map
             del self.conversations[conversation_id]
@@ -205,7 +197,7 @@ class Bot:
         # Workflow
         return self.submitAndIfWait(run, wait)
 
-    def _getHistoriesByID(self, conversation_id):
+    async def _getHistoriesByID(self, conversation_id):
         """
         :return:
         [
@@ -217,16 +209,19 @@ class Bot:
             }
         ]
         """
-        histories = []
 
+        histories = []
         # Get all histories
         url = f"{BASE_CONVERSATION}/{conversation_id}/__data.json?x-sveltekit-invalidated=_1"
-        res = Request.Get(url, cookies=self.cookies)
-        if res.status_code != 200:
+        res = await Request.Get(url, cookies=self.cookies)
+        if res.status != 200:
+            res.close()
             return None
 
         # Check if histories exists
-        data = res.json()["nodes"]
+        data = json.loads(await res.text())
+        res.close()
+        data = data["nodes"]
         history = None
         for dic in data:
             if dic.__contains__("data"):
@@ -247,23 +242,44 @@ class Bot:
                         )
         return histories
 
-    def getHistoriesByID(self, conversation_id=None) -> list:
-        conversation_id = (
-            self.current_conversation if not conversation_id else conversation_id
-        )
-        if not conversation_id:
-            return []
-        logging.info(f"Getting histories for {self.email}:{conversation_id}...")
-        histories = self._getHistoriesByID(conversation_id)
-        if histories is None:
-            raise Exception("Something went wrong")
-        else:
-            return histories
+    def getHistoriesByID(self, conversation_id=None, wait=True) -> Future | list:
+        """
+        Get one conversation's histories.
+        ps: conversation_id can be None (using self.current_conversation).
+        Support async (by returning a Future).
+        """
+
+        # Run func
+        async def run():
+            nonlocal conversation_id
+            conversation_id = (
+                self.current_conversation if not conversation_id else conversation_id
+            )
+            if not conversation_id:
+                return []
+            logging.info(f"Getting histories for {self.email}:{conversation_id}...")
+            histories = await self._getHistoriesByID(conversation_id)
+            if histories is None:
+                raise Exception("Something went wrong")
+            else:
+                return histories
+
+        # Workflow
+        return self.submitAndIfWait(run, wait)
 
     def getConversations(self) -> dict:
+        """
+        :return:
+        {
+            id: title
+        }
+        """
         return self.conversations
 
     def switchConversation(self, conversation_id: str):
+        """
+        Change self.current_conversation
+        """
         if not self.conversations.__contains__(conversation_id):
             raise ConversationNotExistError(
                 ConversationNotExistError.NotInMap.replace("--id--", conversation_id)

@@ -1,5 +1,6 @@
 from http.cookies import SimpleCookie
 import json
+import time
 import logging
 import traceback
 import urllib3.util
@@ -36,23 +37,29 @@ class WebSearch:
         if res.status != 200:
             raise Exception("chat fatal")
         # index = -1
+        start = time.time()
         try:
-            async for c in res.content.iter_chunked(2048):
-                chunks = c.decode("utf-8").split("\n\n")
-
-                for chunk in chunks:
+            tempchunk = ""
+            async for c in res.content.iter_chunked(1024):
+                chunks = c.decode("utf-8").splitlines()
+                if len(chunks) > 1:
+                    tempchunk = ""
+                for chunk in [chunks[-1]]:
                     if chunk:
                         try:
-                            # chunk = tempchunk + re.sub("^data:", "", chunk)
+                            chunk = tempchunk + chunk
                             js = json.loads(chunk)
                             self.message.setWebSearchSteps(js)
+                            tempchunk = ""
                         except Exception:
+                            tempchunk = chunk
                             logging.info(f"load fatal: {chunk}")
                             continue
                         try:
                             if js["messages"][-1]["type"] == "result":
                                 # self.message.setWebSearchSteps(js["messages"][-1])
                                 self.message.web_search_done = True
+                                res.close()
                                 return js
                             # elif len(js["messages"]) - 1 > index:
                             #   if index == -1:
@@ -64,9 +71,10 @@ class WebSearch:
                             pass
         except Exception as e:
             logging.error(str(e))
-            traceback.format_exc()
+            traceback.print_exc()
+        print(f"web_search consumes: {time.time()-start}")
         res.close()
-        return
+        return None
 
     async def getWebSearch(self):
         res = await Request.Get(self.url, headers=self.headers, cookies=self.cookies)
