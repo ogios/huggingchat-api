@@ -23,15 +23,20 @@ setup(
         "Programming Language :: Python :: 3.11",
     ],
     exclude_package_data={
-        "bandwidth_reporter": ["*.json"],
+        "json": [
+            "usercookies",
+            "*.json"
+        ],
+        "others": [
+            "__pycache__",
+            ".git",
+            ".github"
+        ]
     },
     install_requires=[
-        "requests",
+        "aiohttp",
         "dataclasses-json",
     ],
-    extras_require={
-        "curl": ["pycurl"],
-    },
     license="GNU General Public License v3.0",
     long_description=open("./README.md", "r").read(),
     long_description_content_type='text/markdown',

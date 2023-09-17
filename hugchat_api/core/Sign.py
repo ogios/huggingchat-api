@@ -7,6 +7,7 @@ import time
 
 from aiohttp import ClientResponse
 from hugchat_api.core.Workflow import Workflow
+from hugchat_api.core.Customflow import Customflow
 from hugchat_api.utils import Request
 from .CorotineLoop import CorotineLoop
 
@@ -28,6 +29,7 @@ class Sign(Workflow):
         }
         self.cookies: SimpleCookie[str] = SimpleCookie()
 
+        # cookie dir and file
         self.DEFAULT_PATH_DIR = (
             os.path.dirname(os.path.abspath(__file__)) + "/usercookies"
         )
@@ -77,6 +79,7 @@ class Sign(Workflow):
         }
         res = await self._requestsPost(url=url, data=data, allow_redirects=False)
         if res.status == 400:
+            res.close()
             raise Exception("Incorrect username or password")
 
     async def _getAuthURL(self) -> str:
@@ -89,12 +92,16 @@ class Sign(Workflow):
         res = await self._requestsPost(url, headers=headers, allow_redirects=False)
         if res.status == 200:
             # location = res.headers.get("Location", None)
-            location = (await res.json())["location"]
+            # js = await res.json()
+            data = json.loads(await res.text())
+            location = data["location"]
+            res.close()
             if location:
                 return location
             else:
                 raise Exception("No authorize url!")
         else:
+            res.close()
             raise Exception("Something went wrong!")
 
     async def _grantAuth(self, url: str) -> int:
@@ -103,6 +110,7 @@ class Sign(Workflow):
             location = res.headers["location"]
             res = await self._requestsGet(location, allow_redirects=False)
             if res.cookies.__contains__("hf-chat"):
+                res.close()
                 return 1
         # raise Exception("grantAuth fatal")
         if res.status != 200:
@@ -113,19 +121,25 @@ class Sign(Workflow):
         if len(csrf) == 0:
             raise Exception("No csrf found!")
         data = {"csrf": csrf[0]}
+        res.close()
 
         res = await self._requestsPost(url, data=data, allow_redirects=False)
         if res.status != 303:
             raise Exception(f"get hf-chat cookies fatal! - {res.status}")
         else:
             location = res.headers.get("Location")
+        res.close()
         res = await self._requestsGet(location, allow_redirects=False)
         if res.status != 302:
+            res.close()
             raise Exception(f"get hf-chat cookie fatal! - {res.status}")
         else:
+            res.close()
             return 1
 
     def saveCookiesToDir(self, cookie_dir_path: str | None = None) -> str:
+
+        # path
         cookie_dir_path = (
             self.DEFAULT_PATH_DIR if not cookie_dir_path else cookie_dir_path
         )
@@ -137,8 +151,12 @@ class Sign(Workflow):
             os.makedirs(cookie_dir_path)
         logging.info(f"Cookie store path: {cookie_path}")
 
+        # save
+        d = {}
+        for cookie in self.cookies.items():
+            d[cookie[0]] = cookie[1].value
         with open(cookie_path, "w", encoding="utf-8") as f:
-            f.write(json.dumps(self.cookies.__dict__))
+            f.write(json.dumps(d))
         return cookie_path
 
     def _getCookiePath(self, cookie_dir_path: str) -> str:
@@ -155,6 +173,8 @@ class Sign(Workflow):
     def loadCookiesFromDir(
         self, cookie_dir_path: str | None = None
     ) -> SimpleCookie[str]:
+        
+        # path
         cookie_dir_path = (
             self.DEFAULT_PATH_DIR if not cookie_dir_path else cookie_dir_path
         )
@@ -165,13 +185,11 @@ class Sign(Workflow):
                 + f"Cookie file must be named like this: 'your_email'+'.json': '{self.email}.json'"
             )
 
+        #load
         with open(cookie_path, "r", encoding="utf-8") as f:
             try:
                 js = json.loads(f.read())
                 self.cookies.load(js)
-                # for i in js.keys():
-                #     self.cookies.set(i, js[i])
-                #     logging.info(f"{i} loaded")
                 return self.cookies
             except Exception:
                 raise Exception(
@@ -193,12 +211,7 @@ class Sign(Workflow):
         self.save = save
         self.cookie_dir_path = cookie_dir_path
         fut = self.loop.submit(self)
-        while fut.running():
-            time.sleep(0.1)
-        if fut.cancelled():
-            raise Exception(fut.exception())
-        else:
-            return self.cookies
+        return Customflow.wait(fut)
 
 
 if __name__ == "__main__":

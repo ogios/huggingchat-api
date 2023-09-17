@@ -45,7 +45,7 @@ class Chatflow(Workflow):
         data = fillData(self.custom_data)
         data.inputs = self.prompt
         data.options.web_search_id = web_search_id
-        return data
+        return data.to_json()
 
     async def parse(self, res: ClientResponse):
         """
@@ -55,9 +55,9 @@ class Chatflow(Workflow):
             raise Exception(f"chat fatal: {res.status} - {await res.text()}")
         reply = None
         try:
+            tempchunk = ""
             async for c in res.content.iter_chunked(1024):
                 chunks = c.decode("utf-8").split("\n\n")
-                tempchunk = ""
                 for chunk in chunks:
                     if chunk:
                         chunk = tempchunk + re.sub("^data:", "", chunk)
@@ -93,6 +93,7 @@ class Chatflow(Workflow):
         except Exception as e:
             logging.error(e)
             self.message.setError(e)
+            self.message.done = True
             return e
         return None
 
@@ -104,7 +105,7 @@ class Chatflow(Workflow):
         err = Exception("No reply")
         data = self.getRequestData()
         for _ in range(self.max_tries):
-            res = await Request.Post(url, cookies=self.cookies, data=json.dumps(data))
+            res = await Request.Post(url, cookies=self.cookies, data=data)
             if res.status == 500:
                 logging.error("Internal error, may due to model overload, retrying...")
             else:
@@ -126,6 +127,8 @@ class Chatflow(Workflow):
             self.conversation_id,
             self.message,
         ).getWebSearch()
+        if not js:
+            logging.error("Web search seems to met some problems, start chat without web search...")
         web_search_id = js["messages"][-1]["id"] if js else ""
         logging.info(f"web_search_id: {web_search_id}")
         self.web_search_id = web_search_id
