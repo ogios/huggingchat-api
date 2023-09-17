@@ -1,170 +1,93 @@
+from concurrent.futures import Future
+from http.cookies import SimpleCookie
+from typing import Callable, Dict
 import logging
-import time
-from typing import Dict
-import requests
-import requests.utils
-import requests.sessions
 import json
 import re
+import time
 
-from .WebSearch import WebSearch
-from .Message import Message
-from .ThreadPool import ThreadPool
-from .Exceptions import *
-from . import ListBots
-from .config import RequestData, fillData
+from hugchat_api.core.Chatflow import Chatflow
+from hugchat_api.core.CorotineLoop import CorotineLoop
+from hugchat_api.core.Message import Message
+from hugchat_api.core.Exceptions import ConversationNotExistError
+from hugchat_api.core import ListBots
+from hugchat_api.core.Workflow import Workflow
+from hugchat_api.core.config import RequestData, BASE_URL, BASE_CONVERSATION
 from hugchat_api.utils import Request
+
+
+class Customflow(Workflow):
+    @staticmethod
+    def wait(fut: Future):
+        """
+        Wait for the `Future` to be Done.
+        To be noticed: The Exception will be raised if there is one.
+        """
+        while fut.done():
+            time.sleep(0.01)
+        return fut.result()
+
+    @staticmethod
+    def wrap(func: Callable):
+        c = Customflow()
+        c.run = func
+        return c
+
+    async def run(self):
+        pass
 
 
 class Bot:
     def __init__(
         self,
         email: str,
-        cookies: requests.sessions.RequestsCookieJar,
-        thread_pool: ThreadPool,
+        cookies: SimpleCookie[str],
+        loop: CorotineLoop,
         model: str = ListBots.FALCON_180B,
     ):
-        self.thread_pool: ThreadPool = thread_pool
+        self.loop: CorotineLoop = loop
         self.email = email
         self.model = model
-        self.url_index = "https://huggingface.co/chat/"
-        self.url_initConversation = "https://huggingface.co/chat/conversation"
         self.cookies = cookies
-        # self.conversations = list()
         self.conversations: Dict[str, str] = dict()
         self.current_conversation = None
         self.fetchConversations()
 
-    def fetchConversations(self):
+    def submitAndIfWait(self, func: Callable, wait):
+        flow = Customflow.wrap(func)
+        fut = self.loop.submit(flow)
+        return Customflow.wait(fut) if wait else fut
+
+    def fetchConversations(self, wait: bool = True) -> Future | None:
         """
-        Get conversation a from a html and extract them using re
+        Get conversations from html, extracting them using re.
+        Support async (by returning a Future).
         """
-        logging.info("Fetching all conversations...")
-        self.conversations = dict()
-        res = Request.Get(self.url_index, self.cookies)
-        html = res.text
-        conversation_ids = list(
-            set(re.findall('href="/chat/conversation/(.*?)"', html))
-        )
-        for i in conversation_ids:
-            title = re.findall(
-                f'href="/chat/conversation/{i}.*?<div class="flex-1 truncate">(.*?)</div>',
-                html,
-                re.S,
+
+        # Run func
+        async def run():
+            logging.info("Fetching all conversations...")
+            self.conversations = dict()
+            res = await Request.Get(BASE_URL, self.cookies)
+            html = await res.text()
+            conversation_ids = list(
+                set(re.findall('href="/chat/conversation/(.*?)"', html))
             )
-            if len(title) > 0:
-                title = title[0].strip()
-            else:
-                title = "Untitled conversation"
-            self.conversations[i] = title
-            # self.conversations.append({"id": i, "title": title})
+            for i in conversation_ids:
+                title = re.findall(
+                    f'href="/chat/conversation/{i}.*?<div class="flex-1 truncate">(.*?)</div>',
+                    html,
+                    re.S,
+                )
+                if len(title) > 0:
+                    title = title[0].strip()
+                else:
+                    title = "Untitled conversation"
+                self.conversations[i] = title
+            return
 
-
-    def _getData(
-        self, text, web_search_id: str = "", provide_data: RequestData | None = None
-    ):
-        """
-        Fill the custom data with defaults
-        """
-        web_search_id = "" if not web_search_id else web_search_id
-        data = fillData(provide_data)
-        data.inputs = text
-        data.options.web_search_id = web_search_id
-        return data
-
-    def __parseData(self, res: requests.Response, message: Message):
-        """
-        Parser for EventStream
-        """
-        if res.status_code != 200:
-            raise Exception(f"chat fatal: {res.status_code} - {res.text}")
-        reply = None
-        for c in res.iter_content(chunk_size=1024):
-            chunks = c.decode("utf-8").split("\n\n")
-            tempchunk = ""
-            for chunk in chunks:
-                if chunk:
-                    chunk = tempchunk + re.sub("^data:", "", chunk)
-                    try:
-                        js = json.loads(chunk)
-                        tempchunk = ""
-                    except Exception:
-                        tempchunk = chunk
-                        continue
-                    try:
-                        if (js["token"]["special"] is True) & (
-                            js["generated_text"] is not None
-                        ):
-                            reply = js["generated_text"]
-                            message.setFinalText(reply)
-                        else:
-                            reply = js["token"]["text"]
-                            message.setText(reply)
-                    except Exception:
-                        logging.error(str(js))
-                        # print(js)
-        res.close()
-        return reply
-
-    def _parseData(self, res: requests.Response, message: Message):
-        try:
-            reply = self.__parseData(res, message)
-            if not reply:
-                raise Exception("No reply")
-        except Exception as e:
-            # message.setError(e)
-            return e
-        return None
-
-    def _getReply(
-        self,
-        conversation_id: str,
-        text: str,
-        message: Message,
-        web_search_id: str = "",
-        max_tries: int = 3,
-    ):
-        """
-        Send message and Parse response
-        """
-        url = self.url_initConversation + f"/{conversation_id}"
-        err = Exception("No reply")
-        data = self._getData(text, web_search_id)
-        for _ in range(max_tries):
-            res = Request.Post(
-                url, cookies=self.cookies, stream=True, data=json.dumps(data)
-            )
-            if res.status_code == 500:
-                logging.error("Internal error, may due to model overload, retrying...")
-            else:
-                err = self._parseData(res, message=message)
-                if not err:
-                    if not self.conversations[conversation_id]:
-                        self.updateTitle(conversation_id)
-                    return
-            time.sleep(1)
-            continue
-        message.setError(err)
-
-    def _chatWeb(
-        self,
-        conversation_id: str,
-        text: str,
-        message: Message,
-        web_search_id: str = "",
-        max_tries: int = 3,
-    ):
-        webUrl = self.url_initConversation + f"/{conversation_id}/web-search"
-        js = WebSearch(
-            webUrl + f"?prompt={text}",
-            self.cookies.get_dict(),
-            conversation_id,
-            message,
-        ).getWebSearch()
-        web_search_id = js["messages"][-1]["id"] if js else ""
-        logging.info(f"web_search_id: {web_search_id}")
-
-        self._getReply(conversation_id, text, message, web_search_id, max_tries)
+        # Workflow
+        return self.submitAndIfWait(run, wait)
 
     def chat(
         self,
@@ -172,92 +95,115 @@ class Bot:
         conversation_id=None,
         web_search=False,
         max_tries: int = 3,
+        custom_data: RequestData | None = None,
     ) -> Message | None:
         """
-        Normal chat, send message and wait for reply
+        Normal chat, send message and wait for reply.
+        No Future returns, but Message is keep updating with the conversation.
         """
         conversation_id = (
             self.current_conversation if not conversation_id else conversation_id
         )
         if not conversation_id:
-            logging.info("No conversation selected")
+            logging.error("No conversation selected")
             return None
         message = Message(conversation_id, web_search)
-
-        if web_search:
-            self.thread_pool.submit(
-                self._chatWeb, (conversation_id, text, message, "", max_tries)
-            )
-        else:
-            self.thread_pool.submit(
-                self._getReply,
-                (conversation_id, text, message, "", max_tries),
-            )
+        chatflow = Chatflow(
+            message,
+            text,
+            conversation_id,
+            self.cookies,
+            custom_data=custom_data,
+            max_tries=max_tries,
+            callback=None
+            if self.conversations[conversation_id]
+            else [self.updateTitle, [self, conversation_id]],
+        )
+        self.loop.submit(chatflow)
         return message
 
-    def updateTitle(self, conversation_id) -> str:
+    def updateTitle(self, conversation_id: str, wait: bool = True) -> Future | str:
         """
         Get conversation summary
         """
-        if not self.conversations.__contains__(conversation_id):
-            raise ConversationNotExistError(
-                ConversationNotExistError.NotInMap.replace("--id--", conversation_id)
-            )
-        # request for title
-        url = self.url_initConversation + f"/{conversation_id}/summarize"
-        res = Request.Post(url, cookies=self.cookies)
-        if res.status_code != 200:
-            raise Exception("get conversation title failed")
-        js = res.json()
 
-        # set title in map
-        self.conversations[conversation_id] = js["title"]
-        return js["title"]
+        # Run func
+        async def run():
+            if not self.conversations.__contains__(conversation_id):
+                raise ConversationNotExistError(
+                    ConversationNotExistError.NotInMap.replace(
+                        "--id--", conversation_id
+                    )
+                )
+            # request for title
+            url = f"{BASE_CONVERSATION}/{conversation_id}/summarize"
+            res = await Request.Post(url, cookies=self.cookies)
+            if res.status != 200:
+                raise Exception("get conversation title failed")
+            js = await res.json()
 
-    def createConversation(self) -> str:
+            # set title in map
+            self.conversations[conversation_id] = js["title"]
+            return js["title"]
+
+        # Workflow
+        return self.submitAndIfWait(run, wait)
+
+    def createConversation(self, wait: bool = True) -> Future | str:
         """
         Start a new conversation
         """
 
-        # Create new empty conversation
-        # with model defined
-        data = {"model": self.model}
-        res = Request.Post(
-            self.url_initConversation, cookies=self.cookies, data=json.dumps(data)
-        )
-        if res.status_code != 200:
-            raise Exception("create conversation fatal")
-        js = res.json()
+        # Run func
+        async def run():
+            # Create new empty conversation
+            # with model defined
+            data = {"model": self.model}
+            res = await Request.Post(
+                BASE_CONVERSATION, cookies=self.cookies, data=json.dumps(data)
+            )
+            if res.status != 200:
+                raise Exception("create conversation fatal")
+            js = await res.json()
 
-        # add conversation id(key) to map
-        # and set title to None
-        conversation_id = js["conversationId"]
-        self.conversations[conversation_id] = None
-        self.current_conversation = conversation_id
-        return conversation_id
+            # add conversation id(key) to map
+            # and set title to None
+            conversation_id = js["conversationId"]
+            self.conversations[conversation_id] = None
+            self.current_conversation = conversation_id
+            return conversation_id
+
+        # Workflow
+        return self.submitAndIfWait(run, wait)
 
     def removeConversation(self, conversation_id: str):
         """
         Remove conversation through the index of self.conversations
         """
-        if not self.conversations.__contains__(conversation_id):
-            raise ConversationNotExistError(
-                ConversationNotExistError.NotInMap.replace("--id--", conversation_id)
-            )
-        logging.info(f"Deleting conversation <{conversation_id}>")
 
-        # Request for delete
-        url = self.url_initConversation + f"/{conversation_id}"
-        res = Request.Delete(url, cookies=self.cookies)
-        if res.status_code != 200:
-            logging.info(f"{res.text}")
-            logging.info("Delete conversation fatal")
-            raise Exception("Delete conversation fatal")
+        # Run func
+        async def run():
+            if not self.conversations.__contains__(conversation_id):
+                raise ConversationNotExistError(
+                    ConversationNotExistError.NotInMap.replace("--id--", conversation_id)
+                )
 
-        # delete it in map
-        del self.conversations[conversation_id]
-        if self.current_conversation == conversation_id:
-            self.current_conversation = None
+            # Request for delete
+            logging.info(f"Deleting conversation <{conversation_id}>")
+            url = f"{BASE_CONVERSATION}/{conversation_id}"
+            res = Request.Delete(url, cookies=self.cookies)
+            if res.status_code != 200:
+                logging.info(f"{res.text}")
+                logging.info("Delete conversation fatal")
+                raise Exception("Delete conversation fatal")
+
+            # delete it in map
+            del self.conversations[conversation_id]
+            if self.current_conversation == conversation_id:
+                self.current_conversation = None
+
+        # Workflow
+        return self.submitAndIfWait(run, wait)
 
     def _getHistoriesByID(self, conversation_id):
         """
@@ -274,10 +220,7 @@ class Bot:
         histories = []
 
         # Get all histories
-        url = (
-            self.url_initConversation
-            + f"/{conversation_id}/__data.json?x-sveltekit-invalidated=_1"
-        )
+        url = f"{BASE_CONVERSATION}/{conversation_id}/__data.json?x-sveltekit-invalidated=_1"
         res = Request.Get(url, cookies=self.cookies)
         if res.status_code != 200:
             return None

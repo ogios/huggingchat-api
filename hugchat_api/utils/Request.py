@@ -1,6 +1,6 @@
-import requests
-from requests.sessions import RequestsCookieJar
-from urllib3.util import retry
+from http.cookies import SimpleCookie
+from aiohttp import ClientResponse
+import aiohttp
 
 _headers = {
     "Referer": "https://huggingface.co/chat",
@@ -8,51 +8,55 @@ _headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
 }
 
+_session = aiohttp.ClientSession()
 
-def Get(
-    url: str, cookies: RequestsCookieJar, params=None, stream=False
-) -> requests.Response:
+
+async def Get(
+    url: str,
+    cookies: SimpleCookie[str],
+    headers=None,
+    params=None,
+    allow_redirects=True,
+) -> ClientResponse:
     """
     Requests GET
     """
-    res = requests.get(
+    res = await _session.get(
         url,
         params=params,
-        headers=_headers,
+        headers=_headers if not headers else headers,
         cookies=cookies,
-        stream=stream,
-        # verify=False,
+        allow_redirects=allow_redirects,
     )
     return res
 
 
-def Post(
+async def Post(
     url: str,
-    cookies: RequestsCookieJar,
+    cookies: SimpleCookie[str],
     headers=None,
     params=None,
     data=None,
-    stream=False,
-) -> requests.Response:
+    allow_redirects=True,
+) -> ClientResponse:
     """
     Requests POST
     """
-    res = requests.post(
+    res = await _session.post(
         url,
-        stream=stream,
         params=params,
         data=data,
         headers=_headers if not headers else headers,
         cookies=cookies,
-        # verify=False,
+        allow_redirects=allow_redirects,
     )
     return res
 
 
-def Delete(
-    url: str, cookies: RequestsCookieJar, headers: dict = {}
-) -> requests.Response:
-    res = requests.delete(
+async def Delete(
+    url: str, cookies: SimpleCookie[str], headers: dict = {}
+) -> ClientResponse:
+    res = await _session.delete(
         url,
         headers=_headers if not headers else headers,
         cookies=cookies,

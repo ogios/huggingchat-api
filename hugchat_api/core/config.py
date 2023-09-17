@@ -4,6 +4,8 @@ from typing import List
 
 from hugchat_api.utils import getUUID
 
+BASE_URL = "https://huggingface.co/chat/"
+BASE_CONVERSATION = f"{BASE_URL}/conversation"
 
 @dataclass_json
 @dataclass
