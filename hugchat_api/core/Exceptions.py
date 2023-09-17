@@ -3,3 +3,6 @@ class ConversationNotExistError(Exception):
 
 class FillDataException(Exception):
     pass
+
+class CoroutinThreadErr(Exception):
+    pass
