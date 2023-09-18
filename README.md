@@ -13,6 +13,11 @@
 pip install hugchat-api
 ```
 
+> [!WARNING]  
+> Doc down below is for `v0.0.1.6`  
+> For version after `v0.0.2.0`, please see [Wiki](https://github.com/ogios/huggingchat-api/wiki)
+
+
 ## Sign in
 ```python
 import os
