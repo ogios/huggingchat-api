@@ -37,6 +37,7 @@ setup(
         ]
     },
     install_requires=[
+        "urllib3",
         "aiohttp",
         "dataclasses-json",
     ],
