@@ -21,7 +21,7 @@ class Bot:
         email: str,
         cookies: SimpleCookie[str],
         loop: CorotineLoop,
-        model: str = ListBots.FALCON_180B,
+        model: str = ListBots.OPENASSISTENT_30B_XOR,
     ):
         self.loop: CorotineLoop = loop
         self.email = email

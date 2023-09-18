@@ -10,6 +10,9 @@ setup(
     author_email=__email__,
     description=__description__,
     url=__url__,
+    project_urls = {
+        "Wiki": "https://github.com/ogios/huggingchat-api/wiki",
+    },
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
