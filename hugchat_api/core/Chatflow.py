@@ -148,7 +148,7 @@ class Chatflow(Workflow):
         return
 
     async def run(self):
-        logging.info(f"Start chat: {self.prompt}")
+        logging.debug(f"Start chat: {self.prompt}")
         if self.message.web_search_enabled:
             await self.getWebSearch()
         await self.getReply()

@@ -122,8 +122,9 @@ async def waitAndPrint(message: Message):
     while not message.isDone():
         if message.error is not None:
             raise message.error
-        content = "".join(message.getText())
+        content = "\r" + "".join(message.getText())
         content += print_wait()
+        print(content, flush=True, end="")
         await asyncio.sleep(0.01)
     else:
         content = "".join(message.getText())
