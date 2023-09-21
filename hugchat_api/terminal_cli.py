@@ -272,8 +272,10 @@ async def main(EMAIL: str, PASSWD: str, loop: asyncio.AbstractEventLoop):
 if __name__ == "__main__":
     EMAIL = os.getenv("EMAIL")
     PASSWD = os.getenv("PASSWD")
-    event_loop = asyncio.get_event_loop()
+    event_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(event_loop)
     try:
+        # asyncio.run(main(EMAIL, PASSWD))
         event_loop.run_until_complete(main(EMAIL, PASSWD, event_loop))
     except Exception:
         traceback.print_exc()
