@@ -3,7 +3,6 @@ from http.cookies import SimpleCookie
 import logging
 import time
 import json
-import re
 from typing import Any, List
 from aiohttp import ClientResponse
 
@@ -53,33 +52,45 @@ class Chatflow(Workflow):
         """
         if res.status != 200:
             raise Exception(f"chat fatal: {res.status} - {await res.text()}")
-        reply = None
+        reply = False
         try:
             tempchunk = ""
-            async for c in res.content.iter_chunked(1024):
-                chunks = c.decode("utf-8").split("\n\n")
-                for chunk in chunks:
-                    if chunk:
-                        chunk = tempchunk + re.sub("^data:", "", chunk)
+            tempbytes = b""
+            async for c in res.content.iter_chunked(32):
+                try:
+                    dec = (tempbytes + c).decode("utf-8")
+                except Exception:
+                    tempbytes += c
+                    continue
+                lines = dec.splitlines()
+                for line in lines:
+                    if line:
+                        # line = tempchunk + re.sub("^data:", "", line)
+                        line = tempchunk + line
                         try:
-                            js = json.loads(chunk)
+                            js = json.loads(line)
                             tempchunk = ""
                         except Exception:
-                            logging.error("shit")
-                            tempchunk = chunk
+                            tempchunk = line
+                            logging.debug(f"js load error: {tempchunk}")
                             continue
                         try:
-                            if (js["token"]["special"] is True) & (
-                                js["generated_text"] is not None
-                            ):
-                                reply = js["generated_text"]
-                                self.message.setFinalText(reply)
-                            else:
-                                reply = js["token"]["text"]
-                                self.message.setText(reply)
+                            tp: str = js["type"]
+                            if tp == "status":
+                                if js["status"] == "started":
+                                    self.message.setText("")
+                                else:
+                                    logging.error(f"Status mismatch: {js['status']}")
+                            elif tp == "stream":
+                                self.message.setText(js["token"])
+                                if not reply:
+                                    reply = True
+                            elif tp == "finalAnswer":
+                                self.message.setFinalText(js["text"])
+                                res.close()
+                                return
                         except Exception:
-                            logging.error(str(js))
-                            # print(js)
+                            logging.error(f"JSON structure not recognized: {str(js)}")
             res.close()
             if not reply:
                 raise Exception("No reply")
@@ -128,13 +139,16 @@ class Chatflow(Workflow):
             self.message,
         ).getWebSearch()
         if not js:
-            logging.error("Web search seems to met some problems, start chat without web search...")
+            logging.error(
+                "Web search seems to met some problems, start chat without web search..."
+            )
         web_search_id = js["messages"][-1]["id"] if js else ""
         logging.info(f"web_search_id: {web_search_id}")
         self.web_search_id = web_search_id
         return
 
     async def run(self):
+        logging.info(f"Start chat: {self.prompt}")
         if self.message.web_search_enabled:
             await self.getWebSearch()
         await self.getReply()

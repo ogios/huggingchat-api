@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from threading import Thread
 from concurrent.futures._base import Future
 
@@ -24,6 +25,7 @@ class CorotineLoop:
         return self.thread.is_alive()
 
     async def _run(self, flow: Workflow):
+        logging.debug("Running a workflow")
         return await flow.run()
 
     def submit(self, flow: Workflow) -> Future[None]:

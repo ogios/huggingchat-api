@@ -1,14 +1,15 @@
 import logging
+from typing import List
 
 
 class Message:
     def __init__(self, conversation_id: str, web_search_enabled: bool):
         self.done: bool = False
-        self.stream_text: list = []
+        self.stream_text: List[str] = []
         self.final_text: str | None = None
         self.web_search_enabled = web_search_enabled
         self.web_search_done = False
-        self.web_search_steps = list()
+        self.web_search_steps: List = list()
         self.error: Exception | None = None
         self.conversation_id: str = conversation_id
     
@@ -37,7 +38,7 @@ class Message:
         if done:
             self.done = True
     
-    def getText(self) -> list:
+    def getText(self) -> List[str]:
         if self.error:
             raise Exception(self.error)
         return self.stream_text

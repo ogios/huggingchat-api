@@ -86,6 +86,10 @@ class Bot:
         if not conversation_id:
             logging.error("No conversation selected")
             return None
+        if custom_data is not None:
+            logging.warning(
+                "Please be aware that customize parameter is removed in huggingface chat which i assume maybe for better performance and less tcp traffic since the response body is reduced too."
+            )
         message = Message(conversation_id, web_search)
         chatflow = Chatflow(
             message,
