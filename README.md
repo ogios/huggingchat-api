@@ -15,7 +15,7 @@ pip install hugchat-api
 
 
 > [!NOTE]  
-> **VERSIONS BEFORE `v0.0.1.6` ARE ABANDONED!  PLEASE UPDATE TO THE LASTEST.**  
+> **VERSIONS BEFORE `v0.0.1.6` ARE DEPRECATED!  PLEASE UPDATE TO THE LASTEST.**  
 > For documentation, please see [Wiki](https://github.com/ogios/huggingchat-api/wiki)
 
 ## Lastest Change
