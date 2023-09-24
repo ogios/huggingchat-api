@@ -13,160 +13,26 @@
 pip install hugchat-api
 ```
 
-> [!WARNING]  
-> Doc down below is for `v0.0.1.6`  
-> For version after `v0.0.2.0`, please see [Wiki](https://github.com/ogios/huggingchat-api/wiki)
 
+> [!NOTE]  
+> **VERSIONS BEFORE `v0.0.1.6` ARE ABANDONED!  PLEASE UPDATE TO THE LASTEST.**  
+> For documentation, please see [Wiki](https://github.com/ogios/huggingchat-api/wiki)
 
-## Sign in
-```python
-import os
-from hugchat_api import HuggingChat
+## Lastest Change
+- Fix ! : response parse process (response body changed)
+- Fix ! : web search parse process (api removed)
+- Feat: Provide stdout with `flush` that suits better for stream output
+- too much changes, i forgor💀
 
-EMAIL = os.getenv("EMAIL_QQ")
-PASSWD = ""
-COOKIE_STORE_PATH = "./usercookies"
+## Screenshots
+### Normal Chat
+![hugchat_normal](https://github.com/ogios/huggingchat-api/assets/96933655/7068d243-62c2-4209-a132-ecf7ceb8254a)
 
-# create ThreadPool
-HUG = HuggingChat(max_thread=1)       
-
-# initialize sign in funciton
-sign = HUG.getSign(EMAIL, PASSWD)   
-# sign in or...
-cookies = sign.login(save=True, cookie_dir_path=COOKIE_STORE_PATH)
-# load it from a specified directory
-cookies = sign.loadCookiesFromDir(cookie_dir_path=COOKIE_STORE_PATH)
-```
-
-<details>
-
-<summary>
-
-## API Usage
-
-</summary>
-
-
-- Create Bot
-```python
-bot = HUG.getBot(email=EMAIL, cookies=cookies, model=ListBots.<model_name>)
-```
-- Get all conversations & Print title
-```python
-conversations = bot.getConversations()
-conv_id = list(conversations.keys())[0]
-print(conversations[conv_id])
-```
-- Get all chat histories by conversation_id
-```python
-histories = bot.getHistoriesByID(conversation_id=conv_id)
-print(formatHistory(histories))
-```
-- Delete a conversation
-```python
-bot.removeConversation(conversation_id=conv_id)
-```
-- Create a new conversation
-```python
-conversation_id = bot.createConversation()
-```
-- Chat
-```python
-# chat
-message = bot.chat(
-    text="hi",
-    conversation_id=conversation_id,
-    web_search=True,
-    max_tries=2,
-    # callback=(bot.updateTitle, (conversation_id,))
-)
-# wait the full text or...
-while not message.web_search_done:
-    time.sleep(0.1)
-print(message.getWebSearchSteps())
-while not message.isDone():
-    time.sleep(0.1)
-print(message.getFinalText())
-
-# get the stream text instantly
-print(message.getWebSearchSteps())
-print(message.getText())
-```
-
-**Code:**
-
-```python
-import os, time
-
-from hugchat_api import HuggingChat
-from hugchat_api.core import ListBots
-from hugchat_api.utils import formatHistory, formatConversations
-
-EMAIL = os.getenv("EMAIL")
-PASSWD = os.getenv("PASSWD")
-COOKIE_STORE_PATH = "./usercookies"
-
-'''create ThreadPool'''
-HUG = HuggingChat(max_thread=1)
-
-
-'''initialize sign in funciton'''
-sign = HUG.getSign(EMAIL, PASSWD)
-
-'''sign in or...'''
-cookies = sign.login(save=True, cookie_dir_path=COOKIE_STORE_PATH)
-# cookies = sign.loadCookiesFromDir()
+### With Search Web
+![hugchat_web](https://github.com/ogios/huggingchat-api/assets/96933655/ec818273-4849-4416-b5ea-e2c555ab1140)
 
 
 
-'''create bot with MetaAI's model'''
-bot = HUG.getBot(email=EMAIL, cookies=cookies, model=ListBots.META_70B_HF)
-
-'''get all conversations and see one's title'''
-conversations = bot.getConversations()
-conv_id = list(conversations.keys())[0]
-print(conversations[conv_id])
-
-'''get all chat histories by conversation_id'''
-histories = bot.getHistoriesByID(conversation_id=conv_id)
-print(formatHistory(histories))
-
-'''delete a conversation'''
-bot.removeConversation(conversation_id=conv_id)
-
-'''create a new conversation'''
-conversation_id = bot.createConversation()
-
-'''chat'''
-message = bot.chat(
-    text="hi",
-    conversation_id=conversation_id,
-    web_search=True,
-    max_tries=2,
-    # callback=(bot.updateTitle, (conversation_id,))
-)
-
-
-
-'''wait the full text or...'''
-while not message.web_search_done:
-    time.sleep(0.1)
-print(message.getWebSearchSteps())
-while not message.isDone():
-    time.sleep(0.1)
-print(message.getFinalText())
-
-'''get the stream text instantly'''
-print(message.getWebSearchSteps())
-print(message.getText())
-```
-
-</details>
-
-
-<details>
-
-<summary>
 
 ## Terminal Usage
 
@@ -219,7 +85,3 @@ Example:
 ```
 
 </details>
-
-## Download status
-seperated in regions(country_code). powered by bigquery and mermaid.
-![test](http://47.94.146.109:8000/.md)
