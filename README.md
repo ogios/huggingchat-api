@@ -19,9 +19,9 @@ pip install hugchat-api
 > For documentation, please see [Wiki](https://github.com/ogios/huggingchat-api/wiki)
 
 ## Lastest Change
-- Fix ! : response parse process (response body changed)
-- Fix ! : web search parse process (api removed)
-- Feat: Provide stdout with `flush` that suits better for stream output
+- **Fix! :** response parse process (response body changed)
+- **Fix! :** web search parse process (api removed)
+- **Feat:** Provide stdout with `flush` that suits better for stream output
 - too much changes, i forgor💀
 
 ## Screenshots
