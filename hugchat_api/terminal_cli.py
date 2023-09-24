@@ -1,12 +1,15 @@
-import gc, os, argparse, time
+import gc, os, argparse
 import getpass
 import logging
 import traceback
 import asyncio
+import time
 import typing
 
-# from rich.console import Console
-# from rich.markdown import Markdown
+from hugchat_api.utils.PrintWeb import PrintWeb
+
+from .utils.PrintLoop import PrintLoop
+
 
 from .core import HuggingChat
 from .core.Message import Message
@@ -28,8 +31,6 @@ hug = HuggingChat()
 # FLAG = False
 WEB_SEARCH = False
 NEW_CONVERSATION = False
-
-logging.getLogger().setLevel(logging.INFO)
 
 
 def checkCookies(u):
@@ -59,77 +60,58 @@ def login(u, p=None, force=False):
     return cookies
 
 
-# class Notice:
-#     _notice: int = 0
-#     async def waitForAccept(self):
-#         while self._notice:
-#             await asyncio.sleep(0.1)
-#     def notice(self):
-#         self._notice = 1
-#     def accept(self) -> int:
-#         if self._notice:
-#             self._notice = 0
-#             return 1
-#         else:
-#             return 0
+# def printWait() -> typing.Callable:
+#     tick = time.time()
+#     index = 0
+#     count = 3
+#     dots = "·.."
+#
+#     def c() -> str:
+#         nonlocal tick, index, dots
+#         if time.time() - tick >= 0.5:
+#             tick = time.time()
+#             content = ["."] * count
+#             content[index] = "·"
+#             index = (index + 1) % count
+#             dots = "".join(content)
+#             # print(f"\r{dots}", flush=True, end="")
+#         return dots
+#
+#     return c
 
 
-# async def wait(message: Message, lock: Notice):
+# async def waitAndPrint(message: Message):
+#     print_wait = printWait()
 #     if message.web_search_enabled:
 #         while not message.web_search_done:
+#             print_wait()
 #             await asyncio.sleep(0.01)
-#         else:
-#             lock.notice()
-#             await lock.waitForAccept()
-#             print(f"\r{message.web_search_steps}", flush=True)
+#         print(f"\r{message.web_search_steps}", flush=True)
 #     while not message.isDone():
+#         if message.error is not None:
+#             raise message.error
+#         content = "\r" + "".join(message.getText())
+#         content += print_wait()
+#         print(content, flush=True, end="")
 #         await asyncio.sleep(0.01)
 #     else:
-#         lock.notice()
-#         await lock.waitForAccept()
-#         msg = message.getFinalText()
-#         string = f"\r({color('HFBot', 'blue')}): {msg}"
+#         content = "".join(message.getText())
+#         string = f"\r({color('HFBot', 'blue')}): {content}"
 #         print(string, flush=True)
+#     return
 
 
-def printWait() -> typing.Callable:
-    tick = time.time()
-    index = 0
-    count = 3
-    dots = "·.."
-
-    def c() -> str:
-        nonlocal tick, index, dots
-        if time.time() - tick >= 0.5:
-            tick = time.time()
-            content = ["."] * count
-            content[index] = "·"
-            index = (index + 1) % count
-            dots = "".join(content)
-            # print(f"\r{dots}", flush=True, end="")
-        return dots
-
-    return c
-
-
-async def waitAndPrint(message: Message):
-    print_wait = printWait()
-    if message.web_search_enabled:
-        while not message.web_search_done:
-            print_wait()
-            await asyncio.sleep(0.01)
-        print(f"\r{message.web_search_steps}", flush=True)
-    while not message.isDone():
-        if message.error is not None:
-            raise message.error
-        content = "\r" + "".join(message.getText())
-        content += print_wait()
-        print(content, flush=True, end="")
-        await asyncio.sleep(0.01)
-    else:
-        content = "".join(message.getText())
-        string = f"\r({color('HFBot', 'blue')}): {content}"
-        print(string, flush=True)
+def printloop(message: Message):
+    printweb = PrintWeb(message)
+    printweb.update()
+    print()
+    loop = PrintLoop(message)
+    string = f"\r({color('HFBot', 'blue')}): "
+    print(string)
+    loop.main()
+    print()
+    printweb.sources()
+    print()
 
 
 def changeWeb_search():
@@ -157,7 +139,16 @@ async def main(EMAIL: str, PASSWD: str | None):
         action="store_true",
         help="忽视已保存信息强制登录 - ignore the stored cookies and login",
     )
+    parser.add_argument("--debug", action="store_true", default=False)
     args = parser.parse_args()
+    level = logging.DEBUG if args.debug else logging.WARNING
+    logging.basicConfig(
+        format="%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s",
+        encoding="utf-8",
+        level=level,
+        filename="terminal_cli.log",
+        filemode="w",
+    )
     force = args.f
     u = EMAIL if not args.u else args.u
     print(f"Login in as <{u}>")
@@ -228,10 +219,8 @@ async def main(EMAIL: str, PASSWD: str | None):
                 )
                 if message is None:
                     continue
-                # lock = Notice()
-                # loop.create_task(waitAndPrint(message, lock))
-                await waitAndPrint(message)
-                # await wait(message, lock)
+                # await waitAndPrint(message)
+                printloop(message)
         except Exception:
             traceback.print_exc()
 

@@ -1,18 +1,24 @@
+import asyncio
 from dataclasses import dataclass
 from http.cookies import SimpleCookie
 import logging
 import time
 import json
+from traceback import print_exc
 from typing import Any, List
 from aiohttp import ClientResponse
 
 from hugchat_api.core.Workflow import Workflow
 
-from .WebSearch import WebSearch
 from .Message import Message
 from .Exceptions import *
 from .config import RequestData, fillData, BASE_CONVERSATION
 from hugchat_api.utils import Request
+
+TYPE_STATUS = "status"
+TYPE_STREAM = "stream"
+TYPE_FINAL = "finalAnswer"
+TYPE_WEB = "webSearch"
 
 
 @dataclass
@@ -25,7 +31,6 @@ class Chatflow(Workflow):
     prompt: str
     conversation_id: str
     cookies: SimpleCookie[str]
-    web_search_id: str = ""
     custom_data: RequestData | None = None
     max_tries: int = 3
     callback: List[Any] | None = None
@@ -40,10 +45,10 @@ class Chatflow(Workflow):
         """
         Fill the custom data with defaults
         """
-        web_search_id = "" if not self.web_search_id else self.web_search_id
         data = fillData(self.custom_data)
         data.inputs = self.prompt
-        data.options.web_search_id = web_search_id
+        if self.message.web_search_enabled:
+            data.web_search = True
         return data.to_json()
 
     async def parse(self, res: ClientResponse):
@@ -54,12 +59,20 @@ class Chatflow(Workflow):
             raise Exception(f"chat fatal: {res.status} - {await res.text()}")
         reply = False
         try:
+            size = 32
             tempchunk = ""
             tempbytes = b""
-            async for c in res.content.iter_chunked(32):
+            # async for c in res.content.iter_chunked(size):
+            while 1:
+                c = await res.content.read(size)
+                await asyncio.sleep(0)
+                if not c:
+                    break
                 try:
                     dec = (tempbytes + c).decode("utf-8")
+                    tempbytes = b""
                 except Exception:
+                    logging.debug(f"bytes decode error: {str(c)}")
                     tempbytes += c
                     continue
                 lines = dec.splitlines()
@@ -72,29 +85,41 @@ class Chatflow(Workflow):
                             tempchunk = ""
                         except Exception:
                             tempchunk = line
+                            if '"type":"finalAnswer"' in tempchunk:
+                                self.message.setText("", done=True)
+                                break
                             logging.debug(f"js load error: {tempchunk}")
                             continue
                         try:
                             tp: str = js["type"]
-                            if tp == "status":
-                                if js["status"] == "started":
-                                    self.message.setText("")
+                            logging.debug(js)
+                            if tp == TYPE_STATUS:
+                                if js[TYPE_STATUS] == "started":
+                                    logging.debug("chat started")
                                 else:
                                     logging.error(f"Status mismatch: {js['status']}")
-                            elif tp == "stream":
+                            elif tp == TYPE_WEB:
+                                self.message.setWebSearchSteps(js)
+                            elif tp == TYPE_STREAM:
                                 self.message.setText(js["token"])
                                 if not reply:
                                     reply = True
-                            elif tp == "finalAnswer":
+                            elif tp == TYPE_FINAL:
                                 self.message.setFinalText(js["text"])
-                                res.close()
-                                return
+                                break
+                            else:
+                                logging.warning(f"Unrecognized response type: {tp}")
                         except Exception:
                             logging.error(f"JSON structure not recognized: {str(js)}")
+            logging.debug("parse done")
+            logging.debug(await res.text())
             res.close()
             if not reply:
                 raise Exception("No reply")
         except Exception as e:
+            logging.debug("parse done with error")
+            logging.debug(await res.text())
+            print_exc()
             res.close()
             raise e
 
@@ -115,40 +140,33 @@ class Chatflow(Workflow):
         url = f"{BASE_CONVERSATION}/{self.conversation_id}"
         err = Exception("No reply")
         data = self.getRequestData()
+        logging.debug(f"request data: {self.custom_data}")
+        flag = False
         for _ in range(self.max_tries):
             res = await Request.Post(url, cookies=self.cookies, data=data)
-            if res.status == 500:
+            if res.status != 200:
                 logging.error("Internal error, may due to model overload, retrying...")
             else:
-                err = await self.parseData(res)
-                if not err:
-                    if self.callback is not None:
-                        self.callback[0](*self.callback[1])
-                    return
+                flag = True
+                break
             time.sleep(1)
             continue
-        self.message.setError(err)
+        if not flag:
+            self.message.setError(Exception("Request failed"))
+            return
+        err = await self.parseData(res)
+        if not err:
+            if self.callback is not None:
+                self.callback[0](*self.callback[1])
+        else:
+            self.message.setError(err)
         return
 
     async def getWebSearch(self):
-        web_url = f"{BASE_CONVERSATION}/{self.conversation_id}/web-search"
-        js = await WebSearch(
-            web_url + f"?prompt={self.prompt}",
-            self.cookies,
-            self.conversation_id,
-            self.message,
-        ).getWebSearch()
-        if not js:
-            logging.error(
-                "Web search seems to met some problems, start chat without web search..."
-            )
-        web_search_id = js["messages"][-1]["id"] if js else ""
-        logging.info(f"web_search_id: {web_search_id}")
-        self.web_search_id = web_search_id
         return
 
     async def run(self):
         logging.debug(f"Start chat: {self.prompt}")
-        if self.message.web_search_enabled:
-            await self.getWebSearch()
+        # if self.message.web_search_enabled:
+        #     await self.getWebSearch()
         await self.getReply()

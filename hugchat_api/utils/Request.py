@@ -10,9 +10,11 @@ _headers = {
 
 _session = None
 
+
 async def init(loop):
     global _session
-    _session = aiohttp.ClientSession(trust_env=True, loop=loop)
+    timeout = aiohttp.ClientTimeout(total=60 * 60, sock_read=240)
+    _session = aiohttp.ClientSession(trust_env=True, loop=loop, timeout=timeout)
 
 
 async def Get(

@@ -35,7 +35,7 @@ class WebSearch:
 
     async def parseWebData(self, res: ClientResponse):
         if res.status != 200:
-            raise Exception("chat fatal")
+            raise Exception(f"chat fatal: {res.url} - {res.status} - {await res.text()}")
         # index = -1
         start = time.time()
         try:
@@ -70,8 +70,7 @@ class WebSearch:
                         except Exception:
                             pass
         except Exception as e:
-            logging.error(str(e))
-            traceback.print_exc()
+            raise e
         print(f"web_search consumes: {time.time()-start}")
         res.close()
         return None

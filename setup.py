@@ -40,6 +40,7 @@ setup(
         "urllib3",
         "aiohttp",
         "dataclasses-json",
+        "wcwidth",
     ],
     license="GNU General Public License v3.0",
     long_description=open("./README.md", "r").read(),

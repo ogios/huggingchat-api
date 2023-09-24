@@ -5,6 +5,7 @@ main.py
 *.html
 pyrightconfig.json
 test.py
+*.log
 
 .idea/
 TestArea/
