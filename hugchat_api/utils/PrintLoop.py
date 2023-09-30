@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+import logging
+from traceback import print_exc
+import traceback
 from hugchat_api.core.Message import Message
 
 import os
@@ -75,3 +78,6 @@ class PrintLoop:
         else:
             line = self.get_line()
             print(line, flush=True)
+        if self.message.error:
+            traceback.print_exception(self.message.error)
+            logging.debug(self.message.error)

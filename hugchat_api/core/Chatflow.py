@@ -49,7 +49,9 @@ class Chatflow(Workflow):
         data.inputs = self.prompt
         if self.message.web_search_enabled:
             data.web_search = True
-        return data.to_json()
+        d = data.to_json()
+        logging.debug(f"RequestData: {d}")
+        return d
 
     async def parse(self, res: ClientResponse):
         """
@@ -112,13 +114,13 @@ class Chatflow(Workflow):
                         except Exception:
                             logging.error(f"JSON structure not recognized: {str(js)}")
             logging.debug("parse done")
-            logging.debug(await res.text())
+            # logging.debug(await res.text())
             res.close()
             if not reply:
                 raise Exception("No reply")
         except Exception as e:
             logging.debug("parse done with error")
-            logging.debug(await res.text())
+            # logging.debug(await res.text())
             print_exc()
             res.close()
             raise e
@@ -144,6 +146,7 @@ class Chatflow(Workflow):
         flag = False
         for _ in range(self.max_tries):
             res = await Request.Post(url, cookies=self.cookies, data=data)
+            logging.debug(f"Request status: {res.status}")
             if res.status != 200:
                 logging.error("Internal error, may due to model overload, retrying...")
             else:
@@ -169,4 +172,7 @@ class Chatflow(Workflow):
         logging.debug(f"Start chat: {self.prompt}")
         # if self.message.web_search_enabled:
         #     await self.getWebSearch()
-        await self.getReply()
+        try:
+            await self.getReply()
+        except Exception as e:
+            self.message.setError(e)
