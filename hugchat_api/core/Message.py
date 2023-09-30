@@ -1,13 +1,13 @@
-from typing import List
+from typing import List, Union
 
 
 class Message:
     def __init__(self, conversation_id: str, web_search_enabled: bool):
-        self.error: Exception | None = None
+        self.error: Union[Exception, None] = None
         self.conversation_id: str = conversation_id
         self.done: bool = False
         self.stream_text: List[str] = []
-        self.final_text: str | None = None
+        self.final_text: Union[str, None] = None
         self.web_search_enabled = web_search_enabled
         self.web_search_done = False
         self.web_search_steps: List = list()
@@ -69,7 +69,7 @@ class Message:
         self.done = True
         self.cleanTemp()
 
-    def getFinalText(self) -> str | None:
+    def getFinalText(self) -> Union[str, None]:
         if self.error:
             raise Exception(self.error)
         return self.final_text

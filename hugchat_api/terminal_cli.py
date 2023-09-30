@@ -3,8 +3,7 @@ import getpass
 import logging
 import traceback
 import asyncio
-import time
-import typing
+from typing import Union
 
 from hugchat_api.utils.PrintWeb import PrintWeb
 
@@ -24,11 +23,8 @@ from .utils import (
 )
 from .core import ListBots
 
-# COOKIE_DIR_PATH = os.path.abspath(os.path.dirname(__file__)) + "/usercookies"
-# CONSOLE = Console()
 hug = HuggingChat()
 
-# FLAG = False
 WEB_SEARCH = False
 NEW_CONVERSATION = False
 
@@ -118,9 +114,37 @@ def changeWeb_search():
     global WEB_SEARCH
     WEB_SEARCH = True if not WEB_SEARCH else False
     print(f"WEB_SEARCH is set to `{WEB_SEARCH}`")
+    return
 
 
-async def main(EMAIL: str, PASSWD: str | None):
+def getPromptFalcon() -> ListBots.PromptFalcon:
+    return ListBots.PromptFalcon(
+        system=input("system prompt: "),
+        user=input("user prompt: ")
+    )
+
+
+def chat(bot: Bot, text: str | ListBots.Prompt) -> None:
+    if not bot.current_conversation:
+        print(
+            "Please select or create a conversation using '/ls' and '/cd <int>' or '/new'."
+        )
+        return
+
+    message = bot.chat(
+        text,
+        conversation_id=bot.current_conversation,
+        web_search=WEB_SEARCH,
+    )
+    if message is None:
+        return
+    # await waitAndPrint(message)
+    printloop(message)
+    return
+
+
+
+async def main(EMAIL: str, PASSWD: Union[str, None]):
     # global FLAG
     global WEB_SEARCH
     global NEW_CONVERSATION
@@ -202,25 +226,29 @@ async def main(EMAIL: str, PASSWD: str | None):
                         bot.updateTitle(i["id"])
                     print("done.")
                     print(formatConversations(bot.getConversations()))
+                elif command[0] == "pro":
+                    prompt = getPromptFalcon()
+                    chat(bot, prompt)
                 else:
                     print("wrong command。")
                     continue
             else:
-                if not bot.current_conversation:
-                    print(
-                        "Please select or create a conversation using '/ls' and '/cd <int>' or '/new'."
-                    )
-                    continue
-
-                message = bot.chat(
-                    text,
-                    conversation_id=bot.current_conversation,
-                    web_search=WEB_SEARCH,
-                )
-                if message is None:
-                    continue
-                # await waitAndPrint(message)
-                printloop(message)
+                chat(bot, text)
+                # if not bot.current_conversation:
+                #     print(
+                #         "Please select or create a conversation using '/ls' and '/cd <int>' or '/new'."
+                #     )
+                #     continue
+                #
+                # message = bot.chat(
+                #     text,
+                #     conversation_id=bot.current_conversation,
+                #     web_search=WEB_SEARCH,
+                # )
+                # if message is None:
+                #     continue
+                # # await waitAndPrint(message)
+                # printloop(message)
         except Exception:
             traceback.print_exc()
 

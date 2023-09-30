@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Union
 from dataclasses_json import dataclass_json, DataClassJsonMixin
 
 from hugchat_api.utils import getUUID
@@ -62,18 +63,18 @@ class RequestData(DataClassJsonMixin):
     Post request data (json format)
     """
 
-    inputs: str | None = None
+    inputs: Union[str, None] = None
     """prompt string"""
 
-    id: str | None = None
+    id: Union[str, None] = None
     """uuid"""
 
-    response_id: str | None = None
+    response_id: Union[str, None] = None
     """uuid"""
 
-    is_retry: bool | None = None
+    is_retry: Union[bool, None] = None
 
-    web_search: bool | None = None
+    web_search: Union[bool, None] = None
 
 
 # def getDefaultData() -> RequestData:
@@ -125,7 +126,7 @@ def _fill(data: RequestData, ori: RequestData):
     return data
 
 
-def fillData(data: RequestData | None) -> RequestData:
+def fillData(data: Union[RequestData, None]) -> RequestData:
     ori = getDefaultData()
     if not data:
         return ori

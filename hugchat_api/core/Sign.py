@@ -4,6 +4,7 @@ import os
 import re
 import json
 import time
+from typing import Union
 
 from aiohttp import ClientResponse
 from hugchat_api.core.Workflow import Workflow
@@ -17,11 +18,11 @@ class Sign(Workflow):
         self,
         email: str,
         loop: CorotineLoop,
-        passwd: str | None = None,
+        passwd: Union[str, None] = None,
     ) -> None:
         self.loop = loop
         self.email: str = email
-        self.passwd: str | None = passwd
+        self.passwd: Union[str, None] = passwd
         self.headers = {
             "Referer": "https://huggingface.co/",
             # "Content-Type": "application/json",
@@ -137,7 +138,7 @@ class Sign(Workflow):
             res.close()
             return 1
 
-    def saveCookiesToDir(self, cookie_dir_path: str | None = None) -> str:
+    def saveCookiesToDir(self, cookie_dir_path: Union[str, None] = None) -> str:
 
         # path
         cookie_dir_path = (
@@ -171,7 +172,7 @@ class Sign(Workflow):
         return ""
 
     def loadCookiesFromDir(
-        self, cookie_dir_path: str | None = None
+        self, cookie_dir_path: Union[str, None] = None
     ) -> SimpleCookie[str]:
         
         # path
@@ -206,7 +207,7 @@ class Sign(Workflow):
         return self.cookies
 
     def login(
-        self, save: bool = False, cookie_dir_path: str | None = None
+        self, save: bool = False, cookie_dir_path: Union[str, None] = None
     ) -> SimpleCookie[str]:
         self.save = save
         self.cookie_dir_path = cookie_dir_path

@@ -1,6 +1,6 @@
 from concurrent.futures import Future
 from http.cookies import SimpleCookie
-from typing import Callable, Dict
+from typing import Callable, Dict, Union
 import logging
 import json
 import re
@@ -21,7 +21,7 @@ class Bot:
         email: str,
         cookies: SimpleCookie[str],
         loop: CorotineLoop,
-        model: str = ListBots.OPENASSISTENT_30B_XOR,
+        model: str = ListBots.META_70B_HF,
     ):
         self.loop: CorotineLoop = loop
         self.email = email
@@ -36,7 +36,7 @@ class Bot:
         fut = self.loop.submit(flow)
         return Customflow.wait(fut) if wait else fut
 
-    def fetchConversations(self, wait: bool = True) -> Future | None:
+    def fetchConversations(self, wait: bool = True) -> Union[Future, None]:
         """
         Get conversations from html, extracting them using re.
         Support async (by returning a Future).
@@ -70,12 +70,12 @@ class Bot:
 
     def chat(
         self,
-        text: str,
+        text: Union[str, ListBots.Prompt],
         conversation_id=None,
         web_search=False,
         max_tries: int = 3,
-        custom_data: RequestData | None = None,
-    ) -> Message | None:
+        custom_data: Union[RequestData, None] = None,
+    ) -> Union[Message, None]:
         """
         Normal chat, send message and wait for reply.
         No Future returns, but Message is keep updating with the conversation.
@@ -91,6 +91,10 @@ class Bot:
                 "Please be aware that customize parameter is removed in huggingface chat which i assume maybe for better performance and less tcp traffic since the response body is reduced too."
             )
         message = Message(conversation_id, web_search)
+        if dir(text).__contains__("toText"):
+            logging.debug(f"Text is a Prompt class: {type(text)}")
+            logging.debug(f"toText: {text.toText()}")
+            text = text.toText()
         chatflow = Chatflow(
             message,
             text,
@@ -105,7 +109,9 @@ class Bot:
         self.loop.submit(chatflow)
         return message
 
-    def updateTitle(self, conversation_id: str, wait: bool = True) -> Future | str:
+    def updateTitle(
+        self, conversation_id: str, wait: bool = True
+    ) -> Union[Future, str]:
         """
         Get conversation summary
         Support async (by returning a Future).
@@ -135,7 +141,7 @@ class Bot:
         # Workflow
         return self.submitAndIfWait(run, wait)
 
-    def createConversation(self, wait: bool = True) -> Future | str:
+    def createConversation(self, wait: bool = True) -> Union[Future, str]:
         """
         Start a new conversation
         Support async (by returning a Future).
@@ -167,7 +173,7 @@ class Bot:
 
     def removeConversation(
         self, conversation_id: str, wait: bool = True
-    ) -> Future | None:
+    ) -> Union[Future, None]:
         """
         Remove conversation through the index of self.conversations
         Support async (by returning a Future).
@@ -246,7 +252,7 @@ class Bot:
                         )
         return histories
 
-    def getHistoriesByID(self, conversation_id=None, wait=True) -> Future | list:
+    def getHistoriesByID(self, conversation_id=None, wait=True) -> Union[Future, list]:
         """
         Get one conversation's histories.
         ps: conversation_id can be None (using self.current_conversation).

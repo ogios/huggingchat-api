@@ -17,7 +17,7 @@ class HuggingChat:
         self,
         email: str,
         cookies: SimpleCookie[str],
-        model: str = ListBots.OPENASSISTENT_30B_XOR,
+        model: str = ListBots.META_70B_HF,
     ) -> Bot:
         bot = Bot(
             email=email,

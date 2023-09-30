@@ -5,7 +5,7 @@ import logging
 import time
 import json
 from traceback import print_exc
-from typing import Any, List
+from typing import Any, List, Union
 from aiohttp import ClientResponse
 
 from hugchat_api.core.Workflow import Workflow
@@ -31,9 +31,9 @@ class Chatflow(Workflow):
     prompt: str
     conversation_id: str
     cookies: SimpleCookie[str]
-    custom_data: RequestData | None = None
+    custom_data: Union[RequestData, None] = None
     max_tries: int = 3
-    callback: List[Any] | None = None
+    callback: Union[List[Any], None] = None
     """
     [
         <function>Callable,
