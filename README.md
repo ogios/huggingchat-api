@@ -19,10 +19,10 @@ pip install hugchat-api
 > For documentation, please see [Wiki](https://github.com/ogios/huggingchat-api/wiki)
 
 ## Lastest Change
-- **Feat! :** (Testing, not sure if it's working🤨) System prompt injection
+- **Feat! :** ( Testing, not sure if it's working 🤨 ) System prompt injection
 - rm: `Open-Assistant` is removed from `ListBots`
 - Fix: `Chatflow` error not shown in `Message` hence hard to debug from log
-- Update: Change multiple type hints to `Union` to adapt lower python version
+- Update: Change multiple type hints to `Union` to adapt lower python version [#87](https://github.com/Soulter/hugging-chat-api/issues/87)
 
 
 ## Screenshots
