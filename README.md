@@ -21,6 +21,7 @@ pip install hugchat-api
 ## Lastest Change
 > Last update: 2023-09-30
 
+- Fix: `summarize` api removed causing endless loop
 - **Feat! :** ( Testing, not sure if it's working 🤨 ) System prompt injection
 - rm: `Open-Assistant` is removed from `ListBots`
 - Fix: `Chatflow` error not shown in `Message` hence hard to debug from log
