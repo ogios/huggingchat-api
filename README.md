@@ -19,10 +19,11 @@ pip install hugchat-api
 > For documentation, please see [Wiki](https://github.com/ogios/huggingchat-api/wiki)
 
 ## Lastest Change
-- **Fix! :** response parse process (response body changed)
-- **Fix! :** web search parse process (api removed)
-- **Feat:** Provide stdout with `flush` that suits better for stream output
-- too much changes, i forgor💀
+- **Feat! :** (Testing, not sure if it's working🤨) System prompt injection
+- rm: `Open-Assistant` is removed from `ListBots`
+- Fix: `Chatflow` error not shown in `Message` hence hard to debug from log
+- Update: Change multiple type hints to `Union` to adapt lower python version
+
 
 ## Screenshots
 ### Normal Chat
@@ -49,9 +50,10 @@ python -m hugchat_api.terminal_cli -u your_email
 | -u     | Login Email                       |
 | -p     | Use password or not (optional)    |
 | -f     | Ignore the saved cookie and login |
+| --debug| Open cli in with debug log type, log file can be found with the name: `terminal_cli.log` |
 
 ### Commands
-Use `/` + `command` to execute commands:
+Use `/` + `command` to execute:
 
 | Commands   | Descriptions                           |
 |------------|----------------------------------------|
@@ -62,6 +64,8 @@ Use `/` + `command` to execute commands:
 | rm <index> | delete the chosen conversation         |
 | old        | Print out the conversation's histories |
 | web        | Switch 'Search Web' enable option      |
+| pro        | Provide prompt for `System` and `User` |
+
 
 Anything not start with `/` will be seen as chat message.
 
