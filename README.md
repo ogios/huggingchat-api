@@ -19,6 +19,8 @@ pip install hugchat-api
 > For documentation, please see [Wiki](https://github.com/ogios/huggingchat-api/wiki)
 
 ## Lastest Change
+> Last update: 2023-09-30
+
 - **Feat! :** ( Testing, not sure if it's working 🤨 ) System prompt injection
 - rm: `Open-Assistant` is removed from `ListBots`
 - Fix: `Chatflow` error not shown in `Message` hence hard to debug from log
