@@ -223,8 +223,8 @@ async def main(EMAIL: str, PASSWD: Union[str, None]):
                 elif command[0] == "reload":
                     print("Reloading conversations...")
                     bot.fetchConversations()
-                    for i in bot.conversations:
-                        bot.updateTitle(i["id"])
+                    # for i in bot.conversations:
+                    #     bot.updateTitle(i["id"])
                     print("done.")
                     print(formatConversations(bot.getConversations()))
                 elif command[0] == "pro":

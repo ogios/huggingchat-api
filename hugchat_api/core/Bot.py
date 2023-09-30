@@ -104,8 +104,8 @@ class Bot:
             custom_data=custom_data,
             max_tries=max_tries,
             callback=None
-            if self.conversations[conversation_id]
-            else [self.updateTitle, [self, conversation_id]],
+            # if self.conversations[conversation_id]
+            # else [self.updateTitle, [conversation_id, False]],
         )
         logging.debug(f"workflow: {chatflow}")
         self.loop.submit(chatflow)
@@ -115,12 +115,14 @@ class Bot:
         self, conversation_id: str, wait: bool = True
     ) -> Union[Future, str]:
         """
+        !!! Deprecated !!!
         Get conversation summary
         Support async (by returning a Future).
         """
 
         # Run func
         async def run():
+            logging.debug(f"Getting title for: {conversation_id}")
             if not self.conversations.__contains__(conversation_id):
                 raise ConversationNotExistError(
                     ConversationNotExistError.NotInMap.replace(
