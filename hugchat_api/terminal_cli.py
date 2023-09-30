@@ -117,8 +117,8 @@ def changeWeb_search():
     return
 
 
-def getPromptFalcon() -> ListBots.PromptFalcon:
-    return ListBots.PromptFalcon(
+def getPromptFalcon() -> ListBots.PromptLlama:
+    return ListBots.PromptLlama(
         system=input("system prompt: "),
         user=input("user prompt: ")
     )
@@ -185,7 +185,8 @@ async def main(EMAIL: str, PASSWD: Union[str, None]):
 
     cookies = login(u, p, force)
     print(f"You are now logged in as <{u}>")
-    bot: Bot = hug.getBot(u, cookies=cookies, model=ListBots.FALCON_180B)
+    # bot: Bot = hug.getBot(u, cookies=cookies, model=ListBots.FALCON_180B)
+    bot: Bot = hug.getBot(u, cookies=cookies, model=ListBots.META_70B_HF)
     gc.collect()
     while 1:
         try:

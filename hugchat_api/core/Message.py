@@ -1,3 +1,4 @@
+import logging
 from typing import List, Union
 
 
@@ -65,9 +66,10 @@ class Message:
         return self.stream_text
 
     def setFinalText(self, text):
+        self.cleanTemp()
+        logging.debug(f"Final text: {text}")
         self.final_text = text
         self.done = True
-        self.cleanTemp()
 
     def getFinalText(self) -> Union[str, None]:
         if self.error:

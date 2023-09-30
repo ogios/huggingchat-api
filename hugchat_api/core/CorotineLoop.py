@@ -31,6 +31,7 @@ class CorotineLoop:
     def submit(self, flow: Workflow) -> Future[None]:
         if self._checkThread():
             fut = asyncio.run_coroutine_threadsafe(self._run(flow), self.loop)
+            logging.debug(f"submitted a workflow: {flow}")
             return fut
         else:
             raise CoroutinThreadErr("Thread is Down")

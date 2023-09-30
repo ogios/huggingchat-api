@@ -65,7 +65,10 @@ class Chatflow(Workflow):
             tempchunk = ""
             tempbytes = b""
             # async for c in res.content.iter_chunked(size):
+            break_flag = False
             while 1:
+                if break_flag:
+                    break
                 c = await res.content.read(size)
                 await asyncio.sleep(0)
                 if not c:
@@ -89,6 +92,7 @@ class Chatflow(Workflow):
                             tempchunk = line
                             if '"type":"finalAnswer"' in tempchunk:
                                 self.message.setText("", done=True)
+                                break_flag = True
                                 break
                             logging.debug(f"js load error: {tempchunk}")
                             continue
@@ -108,6 +112,7 @@ class Chatflow(Workflow):
                                     reply = True
                             elif tp == TYPE_FINAL:
                                 self.message.setFinalText(js["text"])
+                                break_flag = True
                                 break
                             else:
                                 logging.warning(f"Unrecognized response type: {tp}")

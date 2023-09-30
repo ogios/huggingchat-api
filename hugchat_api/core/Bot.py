@@ -95,6 +95,7 @@ class Bot:
             logging.debug(f"Text is a Prompt class: {type(text)}")
             logging.debug(f"toText: {text.toText()}")
             text = text.toText()
+        logging.debug("creating chat workflow...")
         chatflow = Chatflow(
             message,
             text,
@@ -106,6 +107,7 @@ class Bot:
             if self.conversations[conversation_id]
             else [self.updateTitle, [self, conversation_id]],
         )
+        logging.debug(f"workflow: {chatflow}")
         self.loop.submit(chatflow)
         return message
 
