@@ -4,7 +4,8 @@ from dataclasses_json import dataclass_json, DataClassJsonMixin
 
 from hugchat_api.utils import getUUID
 
-BASE_URL = "https://huggingface.co/chat"
+BASE_HOST = "https://huggingface.co"
+BASE_URL = BASE_HOST + "/chat"
 BASE_CONVERSATION = f"{BASE_URL}/conversation"
 
 

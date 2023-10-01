@@ -123,19 +123,22 @@ class Bot:
         }
         """
         async def run():
+            nonlocal prompts
             logging.debug(f"Setting system prompt for: {prompts}")
             data = FormData()
             data.add_field("customPrompts", json.dumps(data))
             res = await Request.Post(
-                "/chat/settings",
+                BASE_URL + "/settings",
                 cookies=self.cookies,
                 data=data,
                 headers={"Referer": "https://huggingface.co/chat"},
+                allow_redirects=False
             )
             if res.status != 200:
                 logging.error(await res.text())
                 logging.error(f"Fail to set system prompt for: {prompts}")
                 raise Exception(f"Fail to set system prompt for: {prompts}")
+            logging.info("System prompt set")
             return
 
         return self.submitAndIfWait(run, wait)
@@ -147,19 +150,24 @@ class Bot:
         Set system prompt for one model
         """
         async def run():
+            nonlocal prompt, model
             logging.debug(f"Setting system prompt for: {model}")
             data = FormData()
+            if not prompt:
+                prompt = "None"
             data.add_field("customPrompts", json.dumps({model: prompt}))
             res = await Request.Post(
-                "/chat/settings",
+                BASE_URL + "/settings",
                 cookies=self.cookies,
                 data=data,
                 headers={"Referer": "https://huggingface.co/chat"},
+                allow_redirects=False
             )
             if res.status != 200:
                 logging.error(await res.text())
                 logging.error(f"Fail to set system prompt for: {model}")
                 raise Exception(f"Fail to set system prompt for: {model}")
+            logging.info("System prompt set")
             return
         return self.submitAndIfWait(run, wait)
 
