@@ -5,6 +5,8 @@ import logging
 import json
 import re
 
+from aiohttp import FormData
+
 from hugchat_api.core.Chatflow import Chatflow
 from hugchat_api.core.CorotineLoop import CorotineLoop
 from hugchat_api.core.Message import Message
@@ -111,14 +113,67 @@ class Bot:
         self.loop.submit(chatflow)
         return message
 
+    def setSystemPrompts(
+        self, prompts: dict[str, str], wait: bool = True
+    ) -> Union[Future, None]:
+        """
+        Set system prompt for multiple models
+        {
+            <model_name>: <prompt>
+        }
+        """
+        async def run():
+            logging.debug(f"Setting system prompt for: {prompts}")
+            data = FormData()
+            data.add_field("customPrompts", json.dumps(data))
+            res = await Request.Post(
+                "/chat/settings",
+                cookies=self.cookies,
+                data=data,
+                headers={"Referer": "https://huggingface.co/chat"},
+            )
+            if res.status != 200:
+                logging.error(await res.text())
+                logging.error(f"Fail to set system prompt for: {prompts}")
+                raise Exception(f"Fail to set system prompt for: {prompts}")
+            return
+
+        return self.submitAndIfWait(run, wait)
+
+    def setSystemPrompt(
+        self, model: str, prompt: str, wait: bool = True
+    ) -> Union[Future, None]:
+        """
+        Set system prompt for one model
+        """
+        async def run():
+            logging.debug(f"Setting system prompt for: {model}")
+            data = FormData()
+            data.add_field("customPrompts", json.dumps({model: prompt}))
+            res = await Request.Post(
+                "/chat/settings",
+                cookies=self.cookies,
+                data=data,
+                headers={"Referer": "https://huggingface.co/chat"},
+            )
+            if res.status != 200:
+                logging.error(await res.text())
+                logging.error(f"Fail to set system prompt for: {model}")
+                raise Exception(f"Fail to set system prompt for: {model}")
+            return
+        return self.submitAndIfWait(run, wait)
+
     def updateTitle(
         self, conversation_id: str, wait: bool = True
     ) -> Union[Future, str]:
         """
         !!! Deprecated !!!
+
         Get conversation summary
         Support async (by returning a Future).
         """
+
+        return ""
 
         # Run func
         async def run():

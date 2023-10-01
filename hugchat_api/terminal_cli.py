@@ -117,11 +117,11 @@ def changeWeb_search():
     return
 
 
-def getPromptFalcon() -> ListBots.PromptLlama:
-    return ListBots.PromptLlama(
-        system=input("system prompt: "),
-        user=input("user prompt: ")
-    )
+# def getPromptFalcon() -> ListBots.PromptLlama:
+#     return ListBots.PromptLlama(
+#         system=input("system prompt: "),
+#         user=input("user prompt: ")
+#     )
 
 
 def chat(bot: Bot, text: str | ListBots.Prompt) -> None:
@@ -228,8 +228,7 @@ async def main(EMAIL: str, PASSWD: Union[str, None]):
                     print("done.")
                     print(formatConversations(bot.getConversations()))
                 elif command[0] == "pro":
-                    prompt = getPromptFalcon()
-                    chat(bot, prompt)
+                    bot.setSystemPrompt(bot.model, input("System prompt:"))
                 else:
                     print("wrong command。")
                     continue

@@ -1,5 +1,5 @@
 from http.cookies import SimpleCookie
-from aiohttp import ClientResponse
+from aiohttp import ClientResponse, ClientSession
 import aiohttp
 
 _headers = {
@@ -8,7 +8,7 @@ _headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
 }
 
-_session = None
+_session: ClientSession = None
 
 
 async def init(loop):

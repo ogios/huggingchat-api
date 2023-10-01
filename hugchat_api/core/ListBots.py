@@ -10,6 +10,8 @@ FALCON_180B = "tiiuae/falcon-180B-chat"
 @dataclass
 class Prompt:
     """
+    !!! Deprecated, for system prompt please use `setSystemPromt`. !!!
+
     This is the base prompt class.
     You can use it as default prompt.
     !!! This prompt can only be used once in each conversation !!!
@@ -29,6 +31,8 @@ class Prompt:
 @dataclass
 class PromptFalcon(Prompt):
     """
+    !!! Deprecated, for system prompt please use `setSystemPromt`. !!!
+
     Prompt for `falcon` in huggingface.co/chat.
     Extend class<Prompt> and inject `system prompt` with prefix.
     !!! This prompt can only be use once in each conversation !!!
@@ -40,6 +44,8 @@ class PromptFalcon(Prompt):
 @dataclass
 class PromptLlama(Prompt):
     """
+    !!! Deprecated, for system prompt please use `setSystemPromt`. !!!
+
     Prompt for `meta-llama & codellama` in huggingface.co/chat.
     Extend class<Prompt> and inject `system prompt` with prefix.
     !!! This prompt can only be use once in each conversation !!!
