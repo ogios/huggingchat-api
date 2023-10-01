@@ -67,7 +67,7 @@ Use `/` + `command` to execute:
 | rm <index> | delete the chosen conversation         |
 | old        | Print out the conversation's histories |
 | web        | Switch 'Search Web' enable option      |
-| pro        | Provide prompt for `System` and `User` |
+| pro        | Provide prompt for `System`            |
 
 
 Anything not start with `/` will be seen as chat message.
